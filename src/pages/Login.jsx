@@ -1,68 +1,35 @@
-// src/pages/Login.jsx
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
-import { apiPost, apiGet } from "../api";
-import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { setToken, setUser } = useAuth();
+  const { login } = useAuth();
+  const nav = useNavigate();
+  const [email, setEmail] = useState("dustin@zooapp.com");  // your seeded admin
+  const [password, setPassword] = useState("MyPassword123"); // your chosen password
+  const [err, setErr] = useState("");
 
-  const [email, setEmail] = useState("dustin@zooapp.com");
-  const [password, setPassword] = useState("MyPassword123");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setErr("");
     try {
-      // 1) Login → get JWT
-      const { token } = await apiPost("/api/auth/login", { email, password });
-      setToken(token);
-
-      // 2) Fetch profile with JWT
-      const me = await apiGet("/api/employee/me", token);
-      setUser(me);
-
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
+      await login(email, password);
+      nav("/dashboard", { replace: true });
+    } catch (error) {
+      setErr(error.message);
     }
   }
 
   return (
-    <div className="center">
-      <form className="card" onSubmit={handleSubmit}>
-        <h1>Employee Login</h1>
-        {error && <div className="error">{error}</div>}
-
+    <div className="page center">
+      <form className="card" onSubmit={onSubmit}>
+        <h2>Employee Login</h2>
         <label>Email</label>
-        <input
-          type="email"
-          placeholder="you@zooapp.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="username"
-        />
-
+        <input value={email} onChange={(e) => setEmail(e.target.value)} />
         <label>Password</label>
-        <input
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-        />
-
-        <button disabled={loading}>{loading ? "Signing in..." : "Sign In"}</button>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        {err && <div className="error">{err}</div>}
+        <button className="btn" type="submit">Sign in</button>
       </form>
     </div>
   );

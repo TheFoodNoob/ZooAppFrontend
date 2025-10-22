@@ -1,0 +1,328 @@
+// src/pages/Employees.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../api";
+import Toast from "../components/Toast";
+
+const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
+
+export default function Employees() {
+  const { token, user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  // toast
+  const [toast, setToast] = useState({ open: false, type: "success", text: "" });
+  const showToast = (type, text) => setToast({ open: true, type, text });
+
+  // search/filter
+  const [q, setQ] = useState("");
+
+  // create form
+  const [form, setForm] = useState({
+    department_id: 1,
+    first_name: "",
+    last_name: "",
+    email: "",
+    role: "keeper",
+    job_title: "",
+    password: "",
+  });
+
+  // inline edit
+  const [editId, setEditId] = useState(null);
+  const [edit, setEdit] = useState({ role: "", job_title: "", is_active: 1 });
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await fetch(`${api}/api/employees`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+      setList(await res.json());
+    } catch (e) {
+      setErr(e.message || "Failed to load employees");
+      showToast("error", e.message || "Failed to load employees");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function createEmployee(e) {
+    e.preventDefault();
+    setErr("");
+    if (!isAdmin) return setErr("Only admins can create employees.");
+    try {
+      const res = await fetch(`${api}/api/employees`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Create failed");
+
+      showToast("success", `Employee created (id ${data.employee_id})`);
+      setForm({
+        department_id: 1, first_name: "", last_name: "",
+        email: "", role: "keeper", job_title: "", password: "",
+      });
+      await load();
+    } catch (e) {
+      setErr(e.message);
+      showToast("error", e.message);
+    }
+  }
+
+  function beginEdit(row) {
+    setEditId(row.employee_id);
+    setEdit({
+      role: row.role,
+      job_title: row.job_title ?? "",
+      is_active: Number(row.is_active ?? 1),
+    });
+  }
+  function cancelEdit() {
+    setEditId(null);
+    setEdit({ role: "", job_title: "", is_active: 1 });
+  }
+  async function saveEdit(id) {
+    if (!isAdmin) return setErr("Only admins can update employees.");
+    try {
+      const res = await fetch(`${api}/api/employees/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(edit),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      showToast("success", "Employee updated");
+      cancelEdit();
+      await load();
+    } catch (e) {
+      setErr(e.message);
+      showToast("error", e.message);
+    }
+  }
+  async function remove(id) {
+    if (!isAdmin) return setErr("Only admins can delete employees.");
+    if (!confirm("Delete this employee?")) return;
+    try {
+      const res = await fetch(`${api}/api/employees/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      showToast("success", "Employee deleted");
+      await load();
+    } catch (e) {
+      setErr(e.message);
+      showToast("error", e.message);
+    }
+  }
+
+  // case-insensitive filter by name/email/role/department
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return list;
+    return list.filter(r =>
+      `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
+      String(r.email).toLowerCase().includes(s) ||
+      String(r.role).toLowerCase().includes(s) ||
+      String(r.department_id ?? "").toLowerCase().includes(s)
+    );
+  }, [q, list]);
+
+  return (
+    <div className="page">
+      <h2>Employees</h2>
+
+      {/* Search + quick actions row */}
+      <div className="row" style={{ marginBottom: 14 }}>
+        <input
+          className="input"
+          placeholder="Search name, email, role, dept..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button className="btn" onClick={load}>Refresh</button>
+      </div>
+
+      {err && <div className="error" style={{ marginBottom: 10 }}>{err}</div>}
+
+      {/* Create (admin only) */}
+      {isAdmin && (
+        <form onSubmit={createEmployee} className="card" style={{ marginBottom: 20 }}>
+          <h3>Add Employee</h3>
+
+          <label>Department ID</label>
+          <input
+            type="number"
+            min="1"
+            value={form.department_id}
+            onChange={(e) => setForm({ ...form, department_id: Number(e.target.value) })}
+          />
+
+          <label>First name</label>
+          <input
+            value={form.first_name}
+            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+            required
+          />
+
+          <label>Last name</label>
+          <input
+            value={form.last_name}
+            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+            required
+          />
+
+          <label>Email</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
+          />
+
+          <label>Role</label>
+          <select
+            value={form.role}
+            onChange={(e) => setForm({ ...form, role: e.target.value })}
+          >
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+
+          <label>Job title (optional)</label>
+          <input
+            value={form.job_title}
+            onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+          />
+
+          <label>Temp password</label>
+          <input
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            required
+          />
+
+          <button className="btn" type="submit">Create</button>
+        </form>
+      )}
+
+      {/* List */}
+      <div className="panel">
+        {loading ? (
+          <div>Loading…</div>
+        ) : (
+          <table className="table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Dept</th>
+                <th>Job Title</th>
+                <th>Active</th>
+                {isAdmin && <th style={{ width: 200 }}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((row) => {
+                const editing = editId === row.employee_id;
+                return (
+                  <tr key={row.employee_id}>
+                    <td>{row.first_name} {row.last_name}</td>
+                    <td>{row.email}</td>
+
+                    <td>
+                      {editing ? (
+                        <select
+                          value={edit.role}
+                          onChange={(e) => setEdit({ ...edit, role: e.target.value })}
+                        >
+                          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      ) : (
+                        row.role
+                      )}
+                    </td>
+
+                    <td>{row.department_id}</td>
+
+                    <td>
+                      {editing ? (
+                        <input
+                          value={edit.job_title}
+                          onChange={(e) => setEdit({ ...edit, job_title: e.target.value })}
+                        />
+                      ) : (
+                        row.job_title || "—"
+                      )}
+                    </td>
+
+                    <td>
+                      {editing ? (
+                        <select
+                          value={edit.is_active}
+                          onChange={(e) => setEdit({ ...edit, is_active: Number(e.target.value) })}
+                        >
+                          <option value={1}>1</option>
+                          <option value={0}>0</option>
+                        </select>
+                      ) : (
+                        Number(row.is_active) ? "1" : "0"
+                      )}
+                    </td>
+
+                    {isAdmin && (
+                      <td>
+                        {editing ? (
+                          <>
+                            <button className="btn" onClick={() => saveEdit(row.employee_id)}>Save</button>{" "}
+                            <button className="btn" onClick={cancelEdit}>Cancel</button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="btn" onClick={() => beginEdit(row)}>Edit</button>{" "}
+                            <button className="btn" onClick={() => remove(row.employee_id)}>Delete</button>
+                          </>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {!filtered.length && (
+                <tr><td colSpan={7} style={{ padding: 18, color: "var(--muted)" }}>
+                  No employees match “{q}”
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <Toast
+        open={toast.open}
+        type={toast.type}
+        text={toast.text}
+        onClose={() => setToast({ ...toast, open: false })}
+      />
+    </div>
+  );
+}

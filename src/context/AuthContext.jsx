@@ -1,27 +1,67 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-
+import { api } from "../api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem("user");
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [token, setToken]   = useState(null);
+  const [user, setUser]     = useState(null);
+  const [loading, setLoading] = useState(true); // blocks UI until we know
 
+  // Load token from storage on first mount, then fetch /me
   useEffect(() => {
-    if (token) localStorage.setItem("token", token);
-    else localStorage.removeItem("token");
-  }, [token]);
+    const stored = localStorage.getItem("jwt");
+    if (!stored) {
+      setLoading(false);
+      return;
+    }
+    setToken(stored);
+    fetchMe(stored).finally(() => setLoading(false));
+  }, []);
 
-  useEffect(() => {
-    if (user) localStorage.setItem("user", JSON.stringify(user));
-    else localStorage.removeItem("user");
-  }, [user]);
+  async function fetchMe(tok) {
+    try {
+      const res = await fetch(`${api}/api/employee/me`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      });
+      if (res.status === 401) {
+        // invalid/expired token
+        logout();
+        return;
+      }
+      const data = await res.json();
+      setUser(data);
+    } catch (e) {
+      console.error("Failed to fetch /me:", e);
+    }
+  }
 
-  const value = { token, setToken, user, setUser, logout: () => { setToken(""); setUser(null); } };
+  async function login(email, password) {
+    const res = await fetch(`${api}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Login failed");
+    }
+
+    const { token: jwt } = await res.json();
+    localStorage.setItem("jwt", jwt);
+    setToken(jwt);
+    await fetchMe(jwt);
+    return true;
+  }
+
+  function logout() {
+    localStorage.removeItem("jwt");
+    setToken(null);
+    setUser(null);
+  }
+
+  const value = { token, user, loading, login, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
