@@ -1,13 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZooApp</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <!-- IMPORTANT: load the React entry, not main.js -->
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoo Admin Intro</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #7cd, #58a);
+      font-family: Arial, sans-serif;
+      color: white;
+      text-align: center;
+    }
+    a.button {
+      margin-top: 2rem;
+      padding: 1rem 2rem;
+      background: #fff;
+      color: #007bff;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    a.button:hover {
+      background: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to the Zoo Webpage</h1>
+    <header>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="animal.html">Animals</a>
+      <a href="exhibits.html">Exhibits</a>
+      <a href="employee.html">Employees</a>
+    </nav>
+  </header>
+  <a class="button" href="login.html">Admin Login</a>
+</body>
 </html>
