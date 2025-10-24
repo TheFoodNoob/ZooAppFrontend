@@ -26,7 +26,7 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     try {
-      await login(email, password,); // you could customize login logic per type if needed
+      await login(email, password, isEmployee ? "employee" : "customer"); // you could customize login logic per type if needed
       nav("/dashboard", { replace: true });
     } catch (error) {
       setErr(error.message);

@@ -35,8 +35,9 @@ export function AuthProvider({ children }) {
       console.error("Failed to fetch /me:", e);
     }
   }
-
-  async function login(email, password) {
+// TODO:: SET ROLES TO LOGIN EX: "Customer","Employee"
+  async function login(email, password, role) {
+    //API CALL to post
     const res = await fetch(`${api}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,8 +50,10 @@ export function AuthProvider({ children }) {
     }
 
     const { token: jwt } = await res.json();
+    //sets token
     localStorage.setItem("jwt", jwt);
     setToken(jwt);
+    //fetches token if returns w/o error return true
     await fetchMe(jwt);
     return true;
   }
