@@ -56,10 +56,10 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    localStorage.removeItem("jwt");
-    setToken(null);
-    setUser(null);
-  }
+  localStorage.removeItem("jwt");
+  setToken(null);
+  setUser(null);
+}
 
   const value = { token, user, loading, login, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

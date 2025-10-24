@@ -2,9 +2,11 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Login from "./pages/Login.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import Employees from "./pages/Employees.jsx";
-import Reports from "./pages/Reports.jsx";
+import Lost from "./pages/Lost.jsx"
+import Dashboard from "./pages/employee/Dashboard.jsx";
+import Employees from "./pages/employee/Employees.jsx";
+import Reports from "./pages/employee/Reports.jsx";
+import Home from "./pages/ZooHomePage.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
 function Nav() {
@@ -13,15 +15,22 @@ function Nav() {
   return (
     <header className="topbar">
       <nav className="nav">
-        <div className="brand">Zoo Admin</div>
-        {user && (
+        <div className="brand">H-Town Zoo</div>
+        {user ? (
+          
           <ul className="links">
             <li><NavLink to="/dashboard">Dashboard</NavLink></li>
             <li><NavLink to="/employees">Employees</NavLink></li>
             <li><NavLink to="/reports">Reports</NavLink></li>
             <li><button className="btn" onClick={logout}>Logout</button></li>
           </ul>
-        )}
+          
+        ) : (
+          <ul className="links">
+            <li><NavLink to = "/">Home</NavLink></li>
+            <li><NavLink to="/login">Login</NavLink></li>
+          </ul>
+)}
       </nav>
     </header>
   );
@@ -34,19 +43,17 @@ export default function App() {
     <BrowserRouter>
       <Nav />
       <Routes>
+        {/* Home just redirects appropriately */}
+        <Route path="/" element={<Home />} />
+
         {/* Public login page */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
 
-        {/* Home just redirects appropriately */}
-        <Route
-          path="/"
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
-        />
 
-        {/* Protected pages */}
+        {/* Protected pages */} 
         <Route
           path="/dashboard"
           element={
@@ -73,9 +80,8 @@ export default function App() {
         />
 
         {/* Catch-all */}
-        <Route
-          path="*"
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
+        <Route path="*"
+         element={<Lost/>}
         />
       </Routes>
     </BrowserRouter>

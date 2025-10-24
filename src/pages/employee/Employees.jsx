@@ -1,8 +1,8 @@
 // src/pages/Employees.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { api } from "../api";
-import Toast from "../components/Toast";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../api";
+import Toast from "../../components/Toast";
 
 const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
 
