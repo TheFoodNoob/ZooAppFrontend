@@ -1,6 +1,6 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext.jsx";
-
+import { useAuth } from "../../context/AuthContext.jsx";
+import { Link } from "react-router-dom";
 export default function Dashboard() {
   const { user } = useAuth();
 
@@ -14,14 +14,20 @@ export default function Dashboard() {
         <div className="panel">
           <h3>Quick Actions</h3>
           <ul>
-            <li>View employees</li>
-            <li>Run reports</li>
-            <li>Manage events</li>
+            <li>
+              <Link to="/employees" className="">view employees</Link>
+            </li>
+            <li> 
+              <Link to="/reports" className="">run reports</Link>
+              </li>
+            <li> 
+              <Link to="/events" className="">manage events</Link>
+            </li>
           </ul>
         </div>
         <div className="panel">
           <h3>System Status</h3>
-          <p>Everything looks good ✅</p>
+          <p>Everything looks good</p>
         </div>
       </div>
     </div>
