@@ -23,6 +23,9 @@ export default function Dashboard() {
             <li> 
               <Link to="/events" className="">manage events</Link>
             </li>
+            <li> 
+              <Link to="/animals" className="">search animals</Link>
+            </li>
           </ul>
         </div>
         <div className="panel">
