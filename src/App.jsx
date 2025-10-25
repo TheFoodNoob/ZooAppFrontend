@@ -8,6 +8,8 @@ import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import Home from "./pages/ZooHomePage.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
+import EmployeeView from "./pages/employee/EmployeeView.jsx";
+import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -67,6 +69,24 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Employees />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees/:id"
+          element={
+            <ProtectedRoute>
+              <EmployeeView />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EmployeeEdit />
             </ProtectedRoute>
           }
         />
