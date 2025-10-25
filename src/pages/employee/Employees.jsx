@@ -188,93 +188,118 @@ export default function Employees() {
       {/* Create (admin only) */}
       {isAdmin && (
         <form onSubmit={createEmployee} className="card" style={{ marginBottom: 20 }}>
-          <h3>Add Employee</h3>
+          <h3 style={{ marginBottom: 12 }}>Add Employee</h3>
 
-          <label>Department ID</label>
-          <input
-            type="number"
-            min="1"
-            value={form.department_id}
-            onChange={(e) => setForm({ ...form, department_id: Number(e.target.value) })}
-          />
+          <div className="two-col">
+            <div>
+              <label>Department ID</label>
+              <input
+                type="number"
+                min="1"
+                value={form.department_id}
+                onChange={(e) => setForm({ ...form, department_id: Number(e.target.value) })}
+              />
+            </div>
 
-          <label>First name</label>
-          <input
-            value={form.first_name}
-            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-            required
-          />
+            <div>
+              <label>Role</label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              >
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
 
-          <label>Last name</label>
-          <input
-            value={form.last_name}
-            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-            required
-          />
+            <div>
+              <label>First name</label>
+              <input
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                required
+              />
+            </div>
 
-          <label>Email</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
+            <div>
+              <label>Last name</label>
+              <input
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                required
+              />
+            </div>
 
-          <label>Role</label>
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-          >
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+            <div>
+              <label>Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </div>
 
-          <label>Job title (optional)</label>
-          <input
-            value={form.job_title}
-            onChange={(e) => setForm({ ...form, job_title: e.target.value })}
-          />
+            <div>
+              <label>Phone (optional)</label>
+              <input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="e.g., 555-123-4567"
+              />
+            </div>
 
-          <label>Temp password</label>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <label>Phone (optional)</label>
-           <input
-             value={form.phone}
-             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-             placeholder="e.g., 555-123-4567"
-           />
-          
-           <label>SSN (optional)</label>
-           <input
-             value={form.ssn}
-             onChange={(e) => setForm({ ...form, ssn: e.target.value })}
-             placeholder="123-45-6789"
-             pattern="\d{3}-\d{2}-\d{4}"
-             title="Format: 123-45-6789"
-           />
-          
-           <label>Description (optional)</label>
-           <input
-             value={form.description}
-             onChange={(e) => setForm({ ...form, description: e.target.value })}
-             placeholder="Notes about the employee"
-           />
-          
-           <label>Salary (cents, optional)</label>
-           <input
-             type="number"
-             min="0"
-             step="1"
-             value={form.salary_cents}
-             onChange={(e) => setForm({ ...form, salary_cents: e.target.value })}
-             placeholder="e.g., 5500000 for $55,000"
-           />
+            <div>
+              <label>SSN (optional)</label>
+              <input
+                value={form.ssn}
+                onChange={(e) => setForm({ ...form, ssn: e.target.value })}
+                placeholder="123-45-6789"
+                pattern="\d{3}-\d{2}-\d{4}"
+                title="Format: 123-45-6789"
+              />
+            </div>
 
-          <button className="btn" type="submit">Create</button>
+            <div>
+              <label>Salary (cents, optional)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.salary_cents}
+                onChange={(e) => setForm({ ...form, salary_cents: e.target.value })}
+                placeholder="e.g., 5500000 for $55,000"
+              />
+            </div>
+
+            <div className="span-2">
+              <label>Job title (optional)</label>
+              <input
+                value={form.job_title}
+                onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+              />
+            </div>
+
+            <div className="span-2">
+              <label>Description (optional)</label>
+              <input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Notes about the employee"
+              />
+            </div>
+
+            <div className="span-2">
+              <label>Temp password</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <button className="btn" type="submit" style={{ marginTop: 14 }}>Create</button>
         </form>
       )}
 

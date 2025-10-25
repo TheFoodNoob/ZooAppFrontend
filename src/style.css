@@ -90,6 +90,30 @@ input {
 .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
 
+/* Two-column form grid */
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px; /* row x col gap */
+}
+
+/* Make a field span the full width */
+.two-col .span-2 {
+  grid-column: 1 / -1;
+}
+
+/* Match input look for selects */
+select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff9e6;
+  color: var(--text);
+}
+
+
+
 /* Toast */
 .toast {
   position: fixed;
