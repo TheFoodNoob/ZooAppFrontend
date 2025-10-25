@@ -3,11 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink } from "react-router-do
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx"
+import Animals from "./pages/employee/Animals.jsx"
 import Dashboard from "./pages/employee/Dashboard.jsx";
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import Home from "./pages/ZooHomePage.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
+import Departments from "./pages/employee/Departments.jsx";
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -46,13 +48,13 @@ export default function App() {
         {/* Home just redirects appropriately */}
         <Route path="/" element={<Home />} />
 
-        {/* Public login page */}
+        {/* Public pages */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
 
-
+        
         {/* Protected pages */} 
         <Route
           path="/dashboard"
@@ -63,10 +65,26 @@ export default function App() {
           }
         />
         <Route
+          path="/departments"
+          element={
+            <ProtectedRoute>
+              <Departments/>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/employees"
           element={
             <ProtectedRoute>
               <Employees />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animals"
+          element={
+            <ProtectedRoute>
+              <Animals />
             </ProtectedRoute>
           }
         />
