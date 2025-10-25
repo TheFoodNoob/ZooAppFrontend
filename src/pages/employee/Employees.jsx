@@ -1,10 +1,19 @@
-// src/pages/Employees.jsx
+// src/pages/employee/Employees.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
 import Toast from "../../components/Toast";
 
-const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
+const ROLES = [
+  "keeper",
+  "vet",
+  "gate_agent",
+  "ops_manager",
+  "retail",
+  "coordinator",
+  "security",
+  "admin",
+];
 
 export default function Employees() {
   const { token, user } = useAuth();
@@ -33,13 +42,34 @@ export default function Employees() {
     phone: "",
     ssn: "",
     description: "",
-    salary_cents: ""  // keep as string in UI; convert before POST
+    salary_cents: "",
   });
+
   // inline edit
   const [editId, setEditId] = useState(null);
   const [edit, setEdit] = useState({ role: "", job_title: "", is_active: 1 });
 
-  useEffect(() => { load(); }, []);
+  // helper to clean payload
+  function cleanEmployeePayload(f) {
+    const nulled = (v) => (v === "" ? null : v);
+    return {
+      department_id: Number(f.department_id) || 1,
+      first_name: f.first_name,
+      last_name: f.last_name,
+      email: f.email,
+      role: f.role,
+      job_title: nulled(f.job_title),
+      password: f.password,
+      phone: nulled(f.phone),
+      ssn: nulled(f.ssn),
+      description: nulled(f.description),
+      salary_cents: f.salary_cents === "" ? null : Number(f.salary_cents),
+    };
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -76,9 +106,17 @@ export default function Employees() {
 
       showToast("success", `Employee created (id ${data.employee_id})`);
       setForm({
-        department_id: 1, first_name: "", last_name: "",
-        email: "", role: "keeper", job_title: "", password: "",
-        phone: "", ssn: "", description: "", salary_cents: "",
+        department_id: 1,
+        first_name: "",
+        last_name: "",
+        email: "",
+        role: "keeper",
+        job_title: "",
+        password: "",
+        phone: "",
+        ssn: "",
+        description: "",
+        salary_cents: "",
       });
       await load();
     } catch (e) {
@@ -138,50 +176,23 @@ export default function Employees() {
     }
   }
 
-  function cleanEmployeePayload(f) {
-    const nulled = (v) => (v === "" ? null : v);
-    return {
-      department_id: Number(f.department_id) || 1,
-      first_name: f.first_name,
-      last_name: f.last_name,
-      email: f.email,
-      role: f.role,
-      job_title: nulled(f.job_title),
-      password: f.password,
-      phone: nulled(f.phone),
-      ssn: nulled(f.ssn),
-      description: nulled(f.description),
-      salary_cents: f.salary_cents === "" ? null : Number(f.salary_cents),
-    };
-  }
-
-  // case-insensitive filter by name/email/role/department
+  // filter employees by search
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return list;
-    return list.filter(r =>
-      `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
-      String(r.email).toLowerCase().includes(s) ||
-      String(r.role).toLowerCase().includes(s) ||
-      String(r.department_id ?? "").toLowerCase().includes(s) ||
-      String(r.phone ?? "").toLowerCase().includes(s)
+    return list.filter(
+      (r) =>
+        `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
+        String(r.email).toLowerCase().includes(s) ||
+        String(r.role).toLowerCase().includes(s) ||
+        String(r.department_id ?? "").toLowerCase().includes(s) ||
+        String(r.phone ?? "").toLowerCase().includes(s)
     );
   }, [q, list]);
 
   return (
     <div className="page">
       <h2>Employees</h2>
-
-      {/* Search + quick actions row */}
-      <div className="row" style={{ marginBottom: 14 }}>
-        <input
-          className="input"
-          placeholder="Search name, email, role, dept..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <button className="btn" onClick={load}>Refresh</button>
-      </div>
 
       {err && <div className="error" style={{ marginBottom: 10 }}>{err}</div>}
 
@@ -197,7 +208,9 @@ export default function Employees() {
                 type="number"
                 min="1"
                 value={form.department_id}
-                onChange={(e) => setForm({ ...form, department_id: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, department_id: Number(e.target.value) })
+                }
               />
             </div>
 
@@ -207,7 +220,11 @@ export default function Employees() {
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -266,7 +283,9 @@ export default function Employees() {
                 min="0"
                 step="1"
                 value={form.salary_cents}
-                onChange={(e) => setForm({ ...form, salary_cents: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, salary_cents: e.target.value })
+                }
                 placeholder="e.g., 5500000 for $55,000"
               />
             </div>
@@ -275,7 +294,9 @@ export default function Employees() {
               <label>Job title (optional)</label>
               <input
                 value={form.job_title}
-                onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, job_title: e.target.value })
+                }
               />
             </div>
 
@@ -283,7 +304,9 @@ export default function Employees() {
               <label>Description (optional)</label>
               <input
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
                 placeholder="Notes about the employee"
               />
             </div>
@@ -293,17 +316,36 @@ export default function Employees() {
               <input
                 type="password"
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, password: e.target.value })
+                }
                 required
               />
             </div>
           </div>
 
-          <button className="btn" type="submit" style={{ marginTop: 14 }}>Create</button>
+          <button className="btn" type="submit" style={{ marginTop: 14 }}>
+            Create
+          </button>
         </form>
       )}
 
-      {/* List */}
+      <hr style={{ margin: "20px 0", borderColor: "var(--border)" }} />
+
+      {/* Search/filter row (below form) */}
+      <div className="row" style={{ marginBottom: 14 }}>
+        <input
+          className="input"
+          placeholder="Search name, email, role, dept..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button className="btn" onClick={load}>
+          Refresh
+        </button>
+      </div>
+
+      {/* Table */}
       <div className="panel">
         {loading ? (
           <div>Loading…</div>
@@ -329,16 +371,20 @@ export default function Employees() {
                   <tr key={row.employee_id}>
                     <td>{row.first_name} {row.last_name}</td>
                     <td>{row.email}</td>
-                    <td>{row.phone || "—"}</td>
-                    <td>{row.salary_cents ?? "—"}</td>
 
                     <td>
                       {editing ? (
                         <select
                           value={edit.role}
-                          onChange={(e) => setEdit({ ...edit, role: e.target.value })}
+                          onChange={(e) =>
+                            setEdit({ ...edit, role: e.target.value })
+                          }
                         >
-                          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                          {ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         row.role
@@ -351,18 +397,28 @@ export default function Employees() {
                       {editing ? (
                         <input
                           value={edit.job_title}
-                          onChange={(e) => setEdit({ ...edit, job_title: e.target.value })}
+                          onChange={(e) =>
+                            setEdit({ ...edit, job_title: e.target.value })
+                          }
                         />
                       ) : (
                         row.job_title || "—"
                       )}
                     </td>
 
+                    <td>{row.phone || "—"}</td>
+                    <td>{row.salary_cents ?? "—"}</td>
+
                     <td>
                       {editing ? (
                         <select
                           value={edit.is_active}
-                          onChange={(e) => setEdit({ ...edit, is_active: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setEdit({
+                              ...edit,
+                              is_active: Number(e.target.value),
+                            })
+                          }
                         >
                           <option value={1}>1</option>
                           <option value={0}>0</option>
@@ -376,13 +432,30 @@ export default function Employees() {
                       <td>
                         {editing ? (
                           <>
-                            <button className="btn" onClick={() => saveEdit(row.employee_id)}>Save</button>{" "}
-                            <button className="btn" onClick={cancelEdit}>Cancel</button>
+                            <button
+                              className="btn"
+                              onClick={() => saveEdit(row.employee_id)}
+                            >
+                              Save
+                            </button>{" "}
+                            <button className="btn" onClick={cancelEdit}>
+                              Cancel
+                            </button>
                           </>
                         ) : (
                           <>
-                            <button className="btn" onClick={() => beginEdit(row)}>Edit</button>{" "}
-                            <button className="btn" onClick={() => remove(row.employee_id)}>Delete</button>
+                            <button
+                              className="btn"
+                              onClick={() => beginEdit(row)}
+                            >
+                              Edit
+                            </button>{" "}
+                            <button
+                              className="btn"
+                              onClick={() => remove(row.employee_id)}
+                            >
+                              Delete
+                            </button>
                           </>
                         )}
                       </td>
@@ -390,22 +463,11 @@ export default function Employees() {
                   </tr>
                 );
               })}
-              {!filtered.length && (
-                <tr><td colSpan={7} style={{ padding: 18, color: "var(--muted)" }}>
-                  No employees match “{q}”
-                </td></tr>
-              )}
             </tbody>
           </table>
         )}
       </div>
-
-      <Toast
-        open={toast.open}
-        type={toast.type}
-        text={toast.text}
-        onClose={() => setToast({ ...toast, open: false })}
-      />
+      {toast.open && <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />}
     </div>
   );
 }
