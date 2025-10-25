@@ -30,8 +30,11 @@ export default function Employees() {
     role: "keeper",
     job_title: "",
     password: "",
+    phone: "",
+    ssn: "",
+    description: "",
+    salary_cents: ""  // keep as string in UI; convert before POST
   });
-
   // inline edit
   const [editId, setEditId] = useState(null);
   const [edit, setEdit] = useState({ role: "", job_title: "", is_active: 1 });
@@ -66,7 +69,7 @@ export default function Employees() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(cleanEmployeePayload(form)),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Create failed");
@@ -75,6 +78,7 @@ export default function Employees() {
       setForm({
         department_id: 1, first_name: "", last_name: "",
         email: "", role: "keeper", job_title: "", password: "",
+        phone: "", ssn: "", description: "", salary_cents: "",
       });
       await load();
     } catch (e) {
@@ -134,6 +138,23 @@ export default function Employees() {
     }
   }
 
+  function cleanEmployeePayload(f) {
+    const nulled = (v) => (v === "" ? null : v);
+    return {
+      department_id: Number(f.department_id) || 1,
+      first_name: f.first_name,
+      last_name: f.last_name,
+      email: f.email,
+      role: f.role,
+      job_title: nulled(f.job_title),
+      password: f.password,
+      phone: nulled(f.phone),
+      ssn: nulled(f.ssn),
+      description: nulled(f.description),
+      salary_cents: f.salary_cents === "" ? null : Number(f.salary_cents),
+    };
+  }
+
   // case-insensitive filter by name/email/role/department
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -142,7 +163,8 @@ export default function Employees() {
       `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
       String(r.email).toLowerCase().includes(s) ||
       String(r.role).toLowerCase().includes(s) ||
-      String(r.department_id ?? "").toLowerCase().includes(s)
+      String(r.department_id ?? "").toLowerCase().includes(s) ||
+      String(r.phone ?? "").toLowerCase().includes(s)
     );
   }, [q, list]);
 
@@ -219,6 +241,38 @@ export default function Employees() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
           />
+          <label>Phone (optional)</label>
+           <input
+             value={form.phone}
+             onChange={(e) => setForm({ ...form, phone: e.target.value })}
+             placeholder="e.g., 555-123-4567"
+           />
+          
+           <label>SSN (optional)</label>
+           <input
+             value={form.ssn}
+             onChange={(e) => setForm({ ...form, ssn: e.target.value })}
+             placeholder="123-45-6789"
+             pattern="\d{3}-\d{2}-\d{4}"
+             title="Format: 123-45-6789"
+           />
+          
+           <label>Description (optional)</label>
+           <input
+             value={form.description}
+             onChange={(e) => setForm({ ...form, description: e.target.value })}
+             placeholder="Notes about the employee"
+           />
+          
+           <label>Salary (cents, optional)</label>
+           <input
+             type="number"
+             min="0"
+             step="1"
+             value={form.salary_cents}
+             onChange={(e) => setForm({ ...form, salary_cents: e.target.value })}
+             placeholder="e.g., 5500000 for $55,000"
+           />
 
           <button className="btn" type="submit">Create</button>
         </form>
@@ -237,6 +291,8 @@ export default function Employees() {
                 <th>Role</th>
                 <th>Dept</th>
                 <th>Job Title</th>
+                <th>Phone</th>
+                <th>Salary (¢)</th>
                 <th>Active</th>
                 {isAdmin && <th style={{ width: 200 }}>Actions</th>}
               </tr>
@@ -248,6 +304,8 @@ export default function Employees() {
                   <tr key={row.employee_id}>
                     <td>{row.first_name} {row.last_name}</td>
                     <td>{row.email}</td>
+                    <td>{row.phone || "—"}</td>
+                    <td>{row.salary_cents ?? "—"}</td>
 
                     <td>
                       {editing ? (
