@@ -90,17 +90,36 @@ input {
 .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
 
-/* Two-column form grid */
+/* Small button variant */
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+}
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+
+/* Wider card for large forms */
+.card--wide {
+  width: 100%;
+  max-width: 1100px;      /* fits nicely inside .page (1200px) */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Tighter + roomier grid for the form */
 .two-col {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 24px; /* row x col gap */
+  gap: 16px 28px;         /* row x column gap */
 }
+.two-col .span-2 { grid-column: 1 / -1; }
 
-/* Make a field span the full width */
-.two-col .span-2 {
-  grid-column: 1 / -1;
-}
 
 /* Match input look for selects */
 select {

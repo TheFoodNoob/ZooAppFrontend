@@ -22,6 +22,8 @@ export default function Employees() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+
 
   // toast
   const [toast, setToast] = useState({ open: false, type: "success", text: "" });
@@ -119,6 +121,7 @@ export default function Employees() {
         salary_cents: "",
       });
       await load();
+      setShowCreate(false);
     } catch (e) {
       setErr(e.message);
       showToast("error", e.message);
@@ -192,13 +195,33 @@ export default function Employees() {
 
   return (
     <div className="page">
-      <h2>Employees</h2>
+      <div className="row-between" style={{ marginBottom: 10 }}>
+        <h2 style={{ margin: 0 }}>Employees</h2>
+
+        {isAdmin && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setShowCreate(v => !v)}
+            aria-expanded={showCreate}
+            aria-controls="create-employee-form"
+            title={showCreate ? "Hide add employee form" : "Show add employee form"}
+          >
+            {showCreate ? "Hide Form" : "Add Employee"}
+          </button>
+        )}
+      </div>
 
       {err && <div className="error" style={{ marginBottom: 10 }}>{err}</div>}
 
       {/* Create (admin only) */}
-      {isAdmin && (
-        <form onSubmit={createEmployee} className="card" style={{ marginBottom: 20 }}>
+      {isAdmin && showCreate && (
+        <form
+          id="create-employee-form"
+          onSubmit={createEmployee}
+          className="card card--wide"
+          style={{ marginBottom: 20 }}
+        >
           <h3 style={{ marginBottom: 12 }}>Add Employee</h3>
 
           <div className="two-col">
@@ -324,13 +347,22 @@ export default function Employees() {
             </div>
           </div>
 
-          <button className="btn" type="submit" style={{ marginTop: 14 }}>
-            Create
-          </button>
+           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button className="btn" type="submit">Create</button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => setShowCreate(false)}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
       <hr style={{ margin: "20px 0", borderColor: "var(--border)" }} />
+
+      <h3 style={{ margin: "0 0 8px 0" }}>Search</h3>
 
       {/* Search/filter row (below form) */}
       <div className="row" style={{ marginBottom: 14 }}>
