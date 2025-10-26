@@ -3,42 +3,34 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
+import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 
 const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Strict NANP: (555) 123-4567, 555-123-4567, 555.123.4567, 5551234567, optional +1
 const phoneRe = /^(\+1\s?)?(?:\(?[2-9][0-9]{2}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})$/;
-const MAX_SALARY_CENTS = 1_000_000_000; // soft guard (~$10,000,000)
+const MAX_SALARY_CENTS = 1_000_000_000;
 
 export default function EmployeeEdit() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const [err, setErr] = useState("");
   const [form, setForm] = useState(null);
-
-  // field-level errors: { fieldName: "message" }
-  const [fe, setFe] = useState({});
+  const [fe, setFe] = useState({}); // field-level errors
 
   const Help = ({ children }) => (
     <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{children}</div>
   );
-  const FieldError = ({ msg }) =>
-    msg ? (
-      <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div>
-    ) : null;
+  const FieldError = ({ msg }) => (msg ? <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div> : null);
 
-  // ---- load record ----
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${api}/api/employees/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load");
+        const res = await fetchAuth(`${api}/api/employees/${id}`, { headers: { Authorization: `Bearer ${token}` } }, logout);
+        const { ok, data, detail } = await parseJsonWithDetail(res);
+        if (!ok) throw new Error(detail || "Failed to load");
         setForm({
           department_id: data.department_id ?? 1,
           first_name: data.first_name ?? "",
@@ -52,14 +44,11 @@ export default function EmployeeEdit() {
           salary_cents: data.salary_cents ?? "",
           is_active: Number(data.is_active ?? 1),
         });
-      } catch (e) {
-        setErr(e.message);
-      }
+      } catch (e) { setErr(e.message); }
     })();
-  }, [id, token]);
+  }, [id, token, logout]);
 
-  // ---- validation helpers ----
-  function validateField(name, value, full) {
+  function validateField(name, value) {
     const v = (value ?? "").toString();
     switch (name) {
       case "first_name": {
@@ -125,73 +114,26 @@ export default function EmployeeEdit() {
 
   function validateAll(f) {
     if (!f) return {};
-    const fields = [
-      "first_name",
-      "last_name",
-      "email",
-      "department_id",
-      "role",
-      "phone",
-      "salary_cents",
-      "ssn",
-      "job_title",
-      "description",
-    ];
+    const keys = ["first_name","last_name","email","department_id","role","phone","salary_cents","ssn","job_title","description"];
     const next = {};
-    fields.forEach((key) => {
-      const m = validateField(key, f[key], f);
-      if (m) next[key] = m;
-    });
+    for (const k of keys) {
+      const msg = validateField(k, f[k]);
+      if (msg) next[k] = msg;
+    }
     return next;
   }
 
-  // live validate on any change
   useEffect(() => {
     if (!form) return;
     setFe(validateAll(form));
   }, [form]);
 
-  const isValid = Object.keys(fe).length === 0;
-
-  // ---- save ----
-  async function save(e) {
-    e.preventDefault();
-    setErr("");
-    if (!isAdmin) return setErr("Only admins can update employees.");
-
-    const all = validateAll(form);
-    setFe(all);
-    if (Object.keys(all).length > 0) return; // block submit
-
-    try {
-      const res = await fetch(`${api}/api/employees/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...form,
-          department_id: Number(form.department_id) || 1,
-          salary_cents: form.salary_cents === "" ? null : Number(form.salary_cents),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Update failed");
-      nav(`/employees/${id}`);
-    } catch (e) {
-      setErr(e.message);
-    }
-  }
-
-  if (err && !form) return <div className="page"><div className="error">{err}</div></div>;
-  if (!form) return <div className="page">Loading…</div>;
-
-  // helper to bind inputs with per-field update + blur validation
   const bind = (name) => ({
     value: form[name],
     onChange: (e) => {
       const v = e.target.value;
       setForm((f) => ({ ...f, [name]: v }));
-      // validate live as user types (optional: only on blur for heavy checks)
-      const msg = validateField(name, v, { ...form, [name]: v });
+      const msg = validateField(name, v);
       setFe((prev) => {
         const next = { ...prev };
         if (msg) next[name] = msg;
@@ -200,7 +142,7 @@ export default function EmployeeEdit() {
       });
     },
     onBlur: () => {
-      const msg = validateField(name, form[name], form);
+      const msg = validateField(name, form[name]);
       setFe((prev) => {
         const next = { ...prev };
         if (msg) next[name] = msg;
@@ -209,6 +151,64 @@ export default function EmployeeEdit() {
       });
     },
   });
+
+  async function putFullOrFallback() {
+    // Try full route first
+    const fullRes = await fetchAuth(`${api}/api/employees/${id}/full`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        department_id: Number(form.department_id) || 1,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        job_title: form.job_title || null,
+        phone: form.phone || null,
+        ssn: form.ssn || null,
+        description: form.description || null,
+        salary_cents: form.salary_cents === "" ? null : Number(form.salary_cents),
+        is_active: Number(form.is_active),
+      }),
+    }, logout);
+
+    if (fullRes.status !== 404) { // backend has the route (or other status)
+      return fullRes;
+    }
+
+    // Fallback to the legacy route (role/job_title/is_active only)
+    return fetchAuth(`${api}/api/employees/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        role: form.role,
+        job_title: form.job_title || null,
+        is_active: Number(form.is_active),
+      }),
+    }, logout);
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    setErr("");
+    if (!isAdmin) return setErr("Only admins can update employees.");
+
+    const all = validateAll(form);
+    setFe(all);
+    if (Object.keys(all).length > 0) return;
+
+    try {
+      const res = await putFullOrFallback();
+      const { ok, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Update failed");
+      nav(`/employees/${id}`);
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  if (err && !form) return <div className="page"><div className="error">{err}</div></div>;
+  if (!form) return <div className="page">Loading…</div>;
 
   return (
     <div className="page">
@@ -233,9 +233,7 @@ export default function EmployeeEdit() {
           <div>
             <label>Role</label>
             <select {...bind("role")}>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
+              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
             <Help>Choose one of the predefined roles.</Help>
             <FieldError msg={fe.role} />
@@ -269,11 +267,7 @@ export default function EmployeeEdit() {
 
           <div>
             <label>SSN (optional)</label>
-            <input
-              placeholder="123-45-6789"
-              {...bind("ssn")}
-              maxLength={11}
-            />
+            <input placeholder="123-45-6789" maxLength={11} {...bind("ssn")} />
             <Help>Format: <code>123-45-6789</code> (must be unique if set)</Help>
             <FieldError msg={fe.ssn} />
           </div>
@@ -306,24 +300,11 @@ export default function EmployeeEdit() {
           </div>
         </div>
 
-        {/* Summary box if any blocking errors */}
         {Object.keys(fe).length > 0 && (
-          <div
-            className="error"
-            style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              borderRadius: 8,
-              background: "#ffecec",
-              border: "1px solid #ffb3b3",
-              color: "#a40000",
-            }}
-          >
+          <div className="error" style={{ marginTop: 12 }}>
             <strong>Can’t save yet:</strong>
             <ul style={{ margin: "8px 0 0 18px" }}>
-              {Object.values(fe).map((m, i) => (
-                <li key={i}>{m}</li>
-              ))}
+              {Object.values(fe).map((m, i) => <li key={i}>{m}</li>)}
             </ul>
           </div>
         )}

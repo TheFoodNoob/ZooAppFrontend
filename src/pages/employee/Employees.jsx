@@ -4,55 +4,38 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
 import Toast from "../../components/Toast";
+import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 
 const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Strict NANP with optional +1: (555) 123-4567, 555-123-4567, 555.123.4567, 5551234567, +1 555-123-4567
 const phoneRe = /^(\+1\s?)?(?:\(?[2-9][0-9]{2}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})$/;
-const MAX_SALARY_CENTS = 1_000_000_000; // soft guard (~$10,000,000)
+const MAX_SALARY_CENTS = 1_000_000_000;
 
 export default function Employees() {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // toast
   const [toast, setToast] = useState({ open: false, type: "success", text: "" });
   const showToast = (type, text) => setToast({ open: true, type, text });
 
-  // search/filter
   const [q, setQ] = useState("");
-
-  // toggle create
   const [showCreate, setShowCreate] = useState(false);
 
-  // create form
   const [form, setForm] = useState({
-    department_id: 1,
-    first_name: "",
-    last_name: "",
-    email: "",
-    role: "keeper",
-    job_title: "",
-    password: "",
-    phone: "",
-    ssn: "",
-    description: "",
-    salary_cents: "",
+    department_id: 1, first_name: "", last_name: "", email: "",
+    role: "keeper", job_title: "", password: "",
+    phone: "", ssn: "", description: "", salary_cents: "",
   });
-
-  // field-level errors for create form
   const [fe, setFe] = useState({});
-  const summaryErrors = Object.values(fe);
 
   const Help = ({ children }) => (
     <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{children}</div>
   );
-  const FieldError = ({ msg }) =>
-    msg ? <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div> : null;
+  const FieldError = ({ msg }) => (msg ? <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div> : null);
 
   const nulled = (v) => (v === "" ? null : v);
   function cleanEmployeePayload(f) {
@@ -71,8 +54,7 @@ export default function Employees() {
     };
   }
 
-  // -------- Validation (per-field, live) ----------
-  function validateField(name, value, full) {
+  function validateField(name, value) {
     const v = (value ?? "").toString();
     switch (name) {
       case "first_name": {
@@ -145,49 +127,32 @@ export default function Employees() {
   }
 
   function validateAll(f) {
-    const fields = [
-      "first_name",
-      "last_name",
-      "email",
-      "password",
-      "department_id",
-      "role",
-      "phone",
-      "salary_cents",
-      "ssn",
-      "job_title",
-      "description",
-    ];
+    const fields = ["first_name","last_name","email","password","department_id","role","phone","salary_cents","ssn","job_title","description"];
     const next = {};
-    fields.forEach((key) => {
-      const m = validateField(key, f[key], f);
-      if (m) next[key] = m;
+    fields.forEach(k => {
+      const msg = validateField(k, f[k]);
+      if (msg) next[k] = msg;
     });
     return next;
   }
 
-  // live re-validate when the form changes
   useEffect(() => {
     setFe(validateAll(form));
   }, [form]);
 
   useEffect(() => { load(); }, []);
   async function load() {
-    setLoading(true);
-    setErr("");
+    setLoading(true); setErr("");
     try {
-      const res = await fetch(`${api}/api/employees`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error((await res.json()).error || res.statusText);
-      setList(await res.json());
+      const res = await fetchAuth(`${api}/api/employees`, { headers: { Authorization: `Bearer ${token}` } }, logout);
+      const { ok, data, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Failed to load employees");
+      setList(data || []);
     } catch (e) {
       const msg = e.message || "Failed to load employees";
       setErr(msg);
       showToast("error", msg);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
   async function createEmployee(e) {
@@ -203,36 +168,20 @@ export default function Employees() {
     }
 
     try {
-      const res = await fetch(`${api}/api/employees`, {
+      const res = await fetchAuth(`${api}/api/employees`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(cleanEmployeePayload(form)),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg =
-          data.error ||
-          (res.status === 409 ? "Email or SSN already exists." : "Create failed");
+      }, logout);
+
+      const { ok, data, detail, status } = await parseJsonWithDetail(res);
+      if (!ok) {
+        const msg = detail || (status === 409 ? "Email or SSN already exists." : "Create failed");
         throw new Error(msg);
       }
 
       showToast("success", `Employee created (id ${data.employee_id})`);
-      setForm({
-        department_id: 1,
-        first_name: "",
-        last_name: "",
-        email: "",
-        role: "keeper",
-        job_title: "",
-        password: "",
-        phone: "",
-        ssn: "",
-        description: "",
-        salary_cents: "",
-      });
+      setForm({ department_id: 1, first_name: "", last_name: "", email: "", role: "keeper", job_title: "", password: "", phone: "", ssn: "", description: "", salary_cents: "" });
       setFe({});
       await load();
       setShowCreate(false);
@@ -250,12 +199,9 @@ export default function Employees() {
     }
     if (!confirm("Delete this employee?")) return;
     try {
-      const res = await fetch(`${api}/api/employees/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Delete failed");
+      const res = await fetchAuth(`${api}/api/employees/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }, logout);
+      const { ok, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Delete failed");
       showToast("success", "Employee deleted");
       await load();
     } catch (e) { setErr(e.message); showToast("error", e.message); }
@@ -273,13 +219,12 @@ export default function Employees() {
     );
   }, [q, list]);
 
-  // input binder for live validation
   const bind = (name) => ({
     value: form[name],
     onChange: (e) => {
       const v = e.target.value;
       setForm((f) => ({ ...f, [name]: v }));
-      const msg = validateField(name, v, { ...form, [name]: v });
+      const msg = validateField(name, v);
       setFe((prev) => {
         const next = { ...prev };
         if (msg) next[name] = msg;
@@ -288,7 +233,7 @@ export default function Employees() {
       });
     },
     onBlur: () => {
-      const msg = validateField(name, form[name], form);
+      const msg = validateField(name, form[name]);
       setFe((prev) => {
         const next = { ...prev };
         if (msg) next[name] = msg;
@@ -303,13 +248,7 @@ export default function Employees() {
       <div className="row-between" style={{ marginBottom: 10 }}>
         <h2 style={{ margin: 0 }}>Employees</h2>
         {isAdmin && (
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => setShowCreate((v) => !v)}
-            aria-expanded={showCreate}
-            aria-controls="create-employee-form"
-          >
+          <button type="button" className="btn btn-sm" onClick={() => setShowCreate(v => !v)} aria-expanded={showCreate} aria-controls="create-employee-form">
             {showCreate ? "Hide Form" : "Add Employee"}
           </button>
         )}
@@ -317,14 +256,8 @@ export default function Employees() {
 
       {err && <div className="error" style={{ marginBottom: 10 }}>{err}</div>}
 
-      {/* Create (admin only, collapsible) */}
       {isAdmin && showCreate && (
-        <form
-          id="create-employee-form"
-          onSubmit={createEmployee}
-          className="card card--wide"
-          style={{ marginBottom: 20 }}
-        >
+        <form id="create-employee-form" onSubmit={createEmployee} className="card card--wide" style={{ marginBottom: 20 }}>
           <h3 style={{ marginBottom: 12 }}>Add Employee</h3>
           <div className="two-col">
             <div>
@@ -333,70 +266,48 @@ export default function Employees() {
               <Help>Must be an existing department (integer ≥ 1).</Help>
               <FieldError msg={fe.department_id} />
             </div>
-
             <div>
               <label>Role</label>
-              <select {...bind("role")}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+              <select {...bind("role")}>{ROLES.map(r => <option key={r} value={r}>{r}</option>)}</select>
               <Help>Choose one of the predefined roles.</Help>
               <FieldError msg={fe.role} />
             </div>
-
-            <div>
-              <label>First name</label>
-              <input required maxLength={50} {...bind("first_name")} />
-              <FieldError msg={fe.first_name} />
-            </div>
-
-            <div>
-              <label>Last name</label>
-              <input required maxLength={50} {...bind("last_name")} />
-              <FieldError msg={fe.last_name} />
-            </div>
-
+            <div><label>First name</label><input required maxLength={50} {...bind("first_name")} /><FieldError msg={fe.first_name} /></div>
+            <div><label>Last name</label><input required maxLength={50} {...bind("last_name")} /><FieldError msg={fe.last_name} /></div>
             <div>
               <label>Email</label>
               <input type="email" required maxLength={100} {...bind("email")} />
               <Help>Example: <code>alex.jones@zooapp.com</code></Help>
               <FieldError msg={fe.email} />
             </div>
-
             <div>
               <label>Phone (optional)</label>
               <input placeholder="555-123-4567" {...bind("phone")} />
               <Help>Examples: <code>555-123-4567</code>, <code>(555) 123-4567</code>, <code>+1 555-123-4567</code></Help>
               <FieldError msg={fe.phone} />
             </div>
-
             <div>
               <label>SSN (optional)</label>
               <input placeholder="123-45-6789" maxLength={11} {...bind("ssn")} />
               <Help>Format: <code>123-45-6789</code> (must be unique if set)</Help>
               <FieldError msg={fe.ssn} />
             </div>
-
             <div>
               <label>Salary (cents, optional)</label>
               <input type="number" min="0" step="1" placeholder="5500000" {...bind("salary_cents")} />
               <Help>Enter cents only. Example: <code>5500000</code> = $55,000.00</Help>
               <FieldError msg={fe.salary_cents} />
             </div>
-
             <div className="span-2">
               <label>Job title (optional)</label>
               <input maxLength={80} {...bind("job_title")} />
               <FieldError msg={fe.job_title} />
             </div>
-
             <div className="span-2">
               <label>Description (optional)</label>
               <input maxLength={250} placeholder="Notes about the employee" {...bind("description")} />
               <FieldError msg={fe.description} />
             </div>
-
             <div className="span-2">
               <label>Temp password</label>
               <input type="password" required {...bind("password")} />
@@ -405,33 +316,18 @@ export default function Employees() {
             </div>
           </div>
 
-          {/* Summary box if blocked */}
-          {summaryErrors.length > 0 && (
-            <div
-              className="error"
-              style={{
-                marginTop: 12,
-                padding: "10px 12px",
-                borderRadius: 8,
-                background: "#ffecec",
-                border: "1px solid #ffb3b3",
-                color: "#a40000",
-              }}
-            >
+          {Object.keys(fe).length > 0 && (
+            <div className="error" style={{ marginTop: 12 }}>
               <strong>Can’t create yet:</strong>
               <ul style={{ margin: "8px 0 0 18px" }}>
-                {summaryErrors.map((m, i) => <li key={i}>{m}</li>)}
+                {Object.values(fe).map((m, i) => <li key={i}>{m}</li>)}
               </ul>
             </div>
           )}
 
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button className="btn" type="submit" disabled={summaryErrors.length > 0}>
-              Create
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => setShowCreate(false)}>
-              Cancel
-            </button>
+            <button className="btn" type="submit" disabled={Object.keys(fe).length > 0}>Create</button>
+            <button type="button" className="btn btn-sm" onClick={() => setShowCreate(false)}>Cancel</button>
           </div>
         </form>
       )}
@@ -439,30 +335,15 @@ export default function Employees() {
       <hr style={{ margin: "20px 0", borderColor: "var(--border)" }} />
       <h3 style={{ margin: "0 0 8px 0" }}>Search</h3>
       <div className="row" style={{ marginBottom: 14 }}>
-        <input
-          className="input"
-          placeholder="Search name, email, role, dept..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <input className="input" placeholder="Search name, email, role, dept..." value={q} onChange={(e)=>setQ(e.target.value)} />
         <button className="btn" onClick={load}>Refresh</button>
       </div>
 
-      {/* List (lean columns) */}
       <div className="panel">
-        {loading ? (
-          <div>Loading…</div>
-        ) : (
+        {loading ? <div>Loading…</div> : (
           <table className="table" style={{ width: "100%" }}>
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Dept</th>
-                <th>Active</th>
-                <th style={{ width: 260 }}>Actions</th>
-              </tr>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Active</th><th style={{ width: 260 }}>Actions</th></tr>
             </thead>
             <tbody>
               {filtered.map((row) => (
@@ -478,14 +359,8 @@ export default function Employees() {
                     <button
                       className="btn btn-sm"
                       onClick={() => remove(row.employee_id)}
-                      disabled={
-                        user?.employee_id && Number(user.employee_id) === Number(row.employee_id)
-                      }
-                      title={
-                        user?.employee_id && Number(user.employee_id) === Number(row.employee_id)
-                          ? "You cannot delete your own account"
-                          : "Delete employee"
-                      }
+                      disabled={user?.employee_id && Number(user.employee_id) === Number(row.employee_id)}
+                      title={user?.employee_id && Number(user.employee_id) === Number(row.employee_id) ? "You cannot delete your own account" : "Delete employee"}
                       style={{ background: "#e57373", borderColor: "#cc5555" }}
                     >
                       Delete
