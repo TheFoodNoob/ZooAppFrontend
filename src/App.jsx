@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx"
 import Dashboard from "./pages/employee/Dashboard.jsx";
+import Animals from "./pages/employee/Animals.jsx"
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import Home from "./pages/ZooHomePage.jsx";
@@ -61,6 +62,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animals"
+          element={
+            <ProtectedRoute>
+              <Animals />
             </ProtectedRoute>
           }
         />
