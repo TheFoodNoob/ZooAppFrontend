@@ -6,6 +6,10 @@ import { api } from "../../api";
 import Toast from "../../components/Toast";
 
 const ROLES = ["keeper","vet","gate_agent","ops_manager","retail","coordinator","security","admin"];
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Strict NANP with optional +1: (555) 123-4567, 555-123-4567, 555.123.4567, 5551234567, +1 555-123-4567
+const phoneRe = /^(\+1\s?)?(?:\(?[2-9][0-9]{2}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})$/;
+const MAX_SALARY_CENTS = 1_000_000_000; // soft guard (~$10,000,000)
 
 export default function Employees() {
   const { token, user } = useAuth();
@@ -27,59 +31,229 @@ export default function Employees() {
 
   // create form
   const [form, setForm] = useState({
-    department_id: 1, first_name: "", last_name: "", email: "",
-    role: "keeper", job_title: "", password: "",
-    phone: "", ssn: "", description: "", salary_cents: "",
+    department_id: 1,
+    first_name: "",
+    last_name: "",
+    email: "",
+    role: "keeper",
+    job_title: "",
+    password: "",
+    phone: "",
+    ssn: "",
+    description: "",
+    salary_cents: "",
   });
+
+  // field-level errors for create form
+  const [fe, setFe] = useState({});
+  const summaryErrors = Object.values(fe);
+
+  const Help = ({ children }) => (
+    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{children}</div>
+  );
+  const FieldError = ({ msg }) =>
+    msg ? <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div> : null;
 
   const nulled = (v) => (v === "" ? null : v);
   function cleanEmployeePayload(f) {
     return {
       department_id: Number(f.department_id) || 1,
-      first_name: f.first_name, last_name: f.last_name, email: f.email,
-      role: f.role, job_title: nulled(f.job_title), password: f.password,
-      phone: nulled(f.phone), ssn: nulled(f.ssn), description: nulled(f.description),
+      first_name: f.first_name.trim(),
+      last_name: f.last_name.trim(),
+      email: f.email.trim(),
+      role: f.role,
+      job_title: nulled(f.job_title?.trim?.() ?? ""),
+      password: f.password,
+      phone: nulled(f.phone?.trim?.() ?? ""),
+      ssn: nulled(f.ssn?.trim?.() ?? ""),
+      description: nulled(f.description?.trim?.() ?? ""),
       salary_cents: f.salary_cents === "" ? null : Number(f.salary_cents),
     };
   }
 
+  // -------- Validation (per-field, live) ----------
+  function validateField(name, value, full) {
+    const v = (value ?? "").toString();
+    switch (name) {
+      case "first_name": {
+        const s = v.trim();
+        if (!s) return "First name is required.";
+        if (s.length > 50) return "First name must be ≤ 50 chars.";
+        return "";
+      }
+      case "last_name": {
+        const s = v.trim();
+        if (!s) return "Last name is required.";
+        if (s.length > 50) return "Last name must be ≤ 50 chars.";
+        return "";
+      }
+      case "email": {
+        const s = v.trim();
+        if (!s) return "Email is required.";
+        if (!emailRe.test(s)) return "Email format is invalid (e.g., name@example.com).";
+        if (s.length > 100) return "Email must be ≤ 100 chars.";
+        return "";
+      }
+      case "password": {
+        const s = v;
+        if (!s) return "Temporary password is required.";
+        if (s.length < 8) return "Password must be at least 8 characters.";
+        if (!/[A-Za-z]/.test(s) || !/\d/.test(s))
+          return "Password must contain at least one letter and one number.";
+        return "";
+      }
+      case "department_id": {
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 1) return "Department ID must be an integer ≥ 1.";
+        return "";
+      }
+      case "role": {
+        if (!ROLES.includes(v)) return "Invalid role.";
+        return "";
+      }
+      case "phone": {
+        const s = v.trim();
+        if (!s) return "";
+        if (!phoneRe.test(s))
+          return "Phone must look like 555-123-4567, (555) 123-4567, or +1 555-123-4567.";
+        return "";
+      }
+      case "salary_cents": {
+        if (v === "") return "";
+        if (!/^\d+$/.test(v) || Number(v) < 0)
+          return "Salary must be a non-negative integer in cents (e.g., 5500000 for $55,000).";
+        if (Number(v) > MAX_SALARY_CENTS)
+          return "Salary is unusually high; please check the amount in cents.";
+        return "";
+      }
+      case "ssn": {
+        if (!v) return "";
+        if (!/^\d{3}-\d{2}-\d{4}$/.test(v)) return "SSN must be in the format 123-45-6789.";
+        return "";
+      }
+      case "job_title": {
+        if (v && v.length > 80) return "Job title must be ≤ 80 chars.";
+        return "";
+      }
+      case "description": {
+        if (v && v.length > 250) return "Description must be ≤ 250 chars.";
+        return "";
+      }
+      default:
+        return "";
+    }
+  }
+
+  function validateAll(f) {
+    const fields = [
+      "first_name",
+      "last_name",
+      "email",
+      "password",
+      "department_id",
+      "role",
+      "phone",
+      "salary_cents",
+      "ssn",
+      "job_title",
+      "description",
+    ];
+    const next = {};
+    fields.forEach((key) => {
+      const m = validateField(key, f[key], f);
+      if (m) next[key] = m;
+    });
+    return next;
+  }
+
+  // live re-validate when the form changes
+  useEffect(() => {
+    setFe(validateAll(form));
+  }, [form]);
+
   useEffect(() => { load(); }, []);
   async function load() {
-    setLoading(true); setErr("");
+    setLoading(true);
+    setErr("");
     try {
-      const res = await fetch(`${api}/api/employees`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${api}/api/employees`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error((await res.json()).error || res.statusText);
       setList(await res.json());
     } catch (e) {
-      setErr(e.message || "Failed to load employees"); showToast("error", e.message || "Failed to load employees");
-    } finally { setLoading(false); }
+      const msg = e.message || "Failed to load employees";
+      setErr(msg);
+      showToast("error", msg);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function createEmployee(e) {
     e.preventDefault();
     setErr("");
     if (!isAdmin) return setErr("Only admins can create employees.");
+
+    const all = validateAll(form);
+    setFe(all);
+    if (Object.keys(all).length > 0) {
+      showToast("error", "Please fix the highlighted issues.");
+      return;
+    }
+
     try {
       const res = await fetch(`${api}/api/employees`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(cleanEmployeePayload(form)),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Create failed");
+      if (!res.ok) {
+        const msg =
+          data.error ||
+          (res.status === 409 ? "Email or SSN already exists." : "Create failed");
+        throw new Error(msg);
+      }
 
       showToast("success", `Employee created (id ${data.employee_id})`);
-      setForm({ department_id: 1, first_name: "", last_name: "", email: "", role: "keeper", job_title: "", password: "", phone: "", ssn: "", description: "", salary_cents: "" });
+      setForm({
+        department_id: 1,
+        first_name: "",
+        last_name: "",
+        email: "",
+        role: "keeper",
+        job_title: "",
+        password: "",
+        phone: "",
+        ssn: "",
+        description: "",
+        salary_cents: "",
+      });
+      setFe({});
       await load();
-      setShowCreate(false); // auto-close after success
-    } catch (e) { setErr(e.message); showToast("error", e.message); }
+      setShowCreate(false);
+    } catch (e) {
+      setErr(e.message);
+      showToast("error", e.message);
+    }
   }
 
   async function remove(id) {
     if (!isAdmin) return setErr("Only admins can delete employees.");
+    if (user?.employee_id && Number(user.employee_id) === Number(id)) {
+      showToast("error", "You cannot delete your own account.");
+      return;
+    }
     if (!confirm("Delete this employee?")) return;
     try {
-      const res = await fetch(`${api}/api/employees/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` }});
+      const res = await fetch(`${api}/api/employees/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Delete failed");
       showToast("success", "Employee deleted");
@@ -90,7 +264,7 @@ export default function Employees() {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return list;
-    return list.filter(r =>
+    return list.filter((r) =>
       `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
       String(r.email).toLowerCase().includes(s) ||
       String(r.role).toLowerCase().includes(s) ||
@@ -99,14 +273,43 @@ export default function Employees() {
     );
   }, [q, list]);
 
+  // input binder for live validation
+  const bind = (name) => ({
+    value: form[name],
+    onChange: (e) => {
+      const v = e.target.value;
+      setForm((f) => ({ ...f, [name]: v }));
+      const msg = validateField(name, v, { ...form, [name]: v });
+      setFe((prev) => {
+        const next = { ...prev };
+        if (msg) next[name] = msg;
+        else delete next[name];
+        return next;
+      });
+    },
+    onBlur: () => {
+      const msg = validateField(name, form[name], form);
+      setFe((prev) => {
+        const next = { ...prev };
+        if (msg) next[name] = msg;
+        else delete next[name];
+        return next;
+      });
+    },
+  });
+
   return (
     <div className="page">
       <div className="row-between" style={{ marginBottom: 10 }}>
         <h2 style={{ margin: 0 }}>Employees</h2>
         {isAdmin && (
-          <button type="button" className="btn btn-sm"
-            onClick={() => setShowCreate(v => !v)}
-            aria-expanded={showCreate} aria-controls="create-employee-form">
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setShowCreate((v) => !v)}
+            aria-expanded={showCreate}
+            aria-controls="create-employee-form"
+          >
             {showCreate ? "Hide Form" : "Add Employee"}
           </button>
         )}
@@ -116,59 +319,119 @@ export default function Employees() {
 
       {/* Create (admin only, collapsible) */}
       {isAdmin && showCreate && (
-        <form id="create-employee-form" onSubmit={createEmployee} className="card card--wide" style={{ marginBottom: 20 }}>
+        <form
+          id="create-employee-form"
+          onSubmit={createEmployee}
+          className="card card--wide"
+          style={{ marginBottom: 20 }}
+        >
           <h3 style={{ marginBottom: 12 }}>Add Employee</h3>
           <div className="two-col">
             <div>
               <label>Department ID</label>
-              <input type="number" min="1" value={form.department_id} onChange={(e)=>setForm({...form, department_id:Number(e.target.value)})}/>
+              <input type="number" min="1" {...bind("department_id")} />
+              <Help>Must be an existing department (integer ≥ 1).</Help>
+              <FieldError msg={fe.department_id} />
             </div>
+
             <div>
               <label>Role</label>
-              <select value={form.role} onChange={(e)=>setForm({...form, role:e.target.value})}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              <select {...bind("role")}>
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
               </select>
+              <Help>Choose one of the predefined roles.</Help>
+              <FieldError msg={fe.role} />
             </div>
+
             <div>
               <label>First name</label>
-              <input value={form.first_name} onChange={e=>setForm({...form, first_name:e.target.value})} required />
+              <input required maxLength={50} {...bind("first_name")} />
+              <FieldError msg={fe.first_name} />
             </div>
+
             <div>
               <label>Last name</label>
-              <input value={form.last_name} onChange={e=>setForm({...form, last_name:e.target.value})} required />
+              <input required maxLength={50} {...bind("last_name")} />
+              <FieldError msg={fe.last_name} />
             </div>
+
             <div>
               <label>Email</label>
-              <input type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required />
+              <input type="email" required maxLength={100} {...bind("email")} />
+              <Help>Example: <code>alex.jones@zooapp.com</code></Help>
+              <FieldError msg={fe.email} />
             </div>
+
             <div>
               <label>Phone (optional)</label>
-              <input value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} placeholder="e.g., 555-123-4567"/>
+              <input placeholder="555-123-4567" {...bind("phone")} />
+              <Help>Examples: <code>555-123-4567</code>, <code>(555) 123-4567</code>, <code>+1 555-123-4567</code></Help>
+              <FieldError msg={fe.phone} />
             </div>
+
             <div>
               <label>SSN (optional)</label>
-              <input value={form.ssn} onChange={e=>setForm({...form, ssn:e.target.value})} placeholder="123-45-6789" pattern="\d{3}-\d{2}-\d{4}" title="Format: 123-45-6789"/>
+              <input placeholder="123-45-6789" maxLength={11} {...bind("ssn")} />
+              <Help>Format: <code>123-45-6789</code> (must be unique if set)</Help>
+              <FieldError msg={fe.ssn} />
             </div>
+
             <div>
               <label>Salary (cents, optional)</label>
-              <input type="number" min="0" step="1" value={form.salary_cents} onChange={e=>setForm({...form, salary_cents:e.target.value})} placeholder="e.g., 5500000 for $55,000"/>
+              <input type="number" min="0" step="1" placeholder="5500000" {...bind("salary_cents")} />
+              <Help>Enter cents only. Example: <code>5500000</code> = $55,000.00</Help>
+              <FieldError msg={fe.salary_cents} />
             </div>
+
             <div className="span-2">
               <label>Job title (optional)</label>
-              <input value={form.job_title} onChange={e=>setForm({...form, job_title:e.target.value})}/>
+              <input maxLength={80} {...bind("job_title")} />
+              <FieldError msg={fe.job_title} />
             </div>
+
             <div className="span-2">
               <label>Description (optional)</label>
-              <input value={form.description} onChange={e=>setForm({...form, description:e.target.value})} placeholder="Notes about the employee"/>
+              <input maxLength={250} placeholder="Notes about the employee" {...bind("description")} />
+              <FieldError msg={fe.description} />
             </div>
+
             <div className="span-2">
               <label>Temp password</label>
-              <input type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required />
+              <input type="password" required {...bind("password")} />
+              <Help>At least 8 characters, include a letter and a number.</Help>
+              <FieldError msg={fe.password} />
             </div>
           </div>
-          <div style={{ display:"flex", gap:10, marginTop:14 }}>
-            <button className="btn" type="submit">Create</button>
-            <button type="button" className="btn btn-sm" onClick={()=>setShowCreate(false)}>Cancel</button>
+
+          {/* Summary box if blocked */}
+          {summaryErrors.length > 0 && (
+            <div
+              className="error"
+              style={{
+                marginTop: 12,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "#ffecec",
+                border: "1px solid #ffb3b3",
+                color: "#a40000",
+              }}
+            >
+              <strong>Can’t create yet:</strong>
+              <ul style={{ margin: "8px 0 0 18px" }}>
+                {summaryErrors.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button className="btn" type="submit" disabled={summaryErrors.length > 0}>
+              Create
+            </button>
+            <button type="button" className="btn btn-sm" onClick={() => setShowCreate(false)}>
+              Cancel
+            </button>
           </div>
         </form>
       )}
@@ -176,14 +439,20 @@ export default function Employees() {
       <hr style={{ margin: "20px 0", borderColor: "var(--border)" }} />
       <h3 style={{ margin: "0 0 8px 0" }}>Search</h3>
       <div className="row" style={{ marginBottom: 14 }}>
-        <input className="input" placeholder="Search name, email, role, dept..."
-          value={q} onChange={(e)=>setQ(e.target.value)} />
+        <input
+          className="input"
+          placeholder="Search name, email, role, dept..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <button className="btn" onClick={load}>Refresh</button>
       </div>
 
       {/* List (lean columns) */}
       <div className="panel">
-        {loading ? <div>Loading…</div> : (
+        {loading ? (
+          <div>Loading…</div>
+        ) : (
           <table className="table" style={{ width: "100%" }}>
             <thead>
               <tr>
@@ -206,7 +475,21 @@ export default function Employees() {
                   <td>
                     <Link className="btn btn-sm" to={`/employees/${row.employee_id}`}>Info</Link>{" "}
                     <Link className="btn btn-sm" to={`/employees/${row.employee_id}/edit`}>Edit</Link>{" "}
-                    <button className="btn btn-sm" onClick={() => remove(row.employee_id)}>Delete</button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => remove(row.employee_id)}
+                      disabled={
+                        user?.employee_id && Number(user.employee_id) === Number(row.employee_id)
+                      }
+                      title={
+                        user?.employee_id && Number(user.employee_id) === Number(row.employee_id)
+                          ? "You cannot delete your own account"
+                          : "Delete employee"
+                      }
+                      style={{ background: "#e57373", borderColor: "#cc5555" }}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
