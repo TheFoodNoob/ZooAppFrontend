@@ -14,12 +14,12 @@ export async function parseJsonWithDetail(res) {
   try { data = await res.json(); } catch (_) {}
 
   const detail =
-   data.error ||
-   (Array.isArray(data.errors)
-     ? data.errors
-         .map((e) => `${e.param ?? "field"}: ${e.msg || "Invalid value"}`)
-         .join("; ")
-     : "") ||
-   "";
+  (Array.isArray(data.errors) && data.errors.length
+    ? data.errors.map(e => `${e.param ?? "field"}: ${e.msg || "Invalid value"}`).join("; ")
+    : "") ||
+  data.error ||
+  "";
   return { ok: res.ok, status: res.status, data, detail };
 }
+
+export default fetchAuth;
