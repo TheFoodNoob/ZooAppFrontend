@@ -259,48 +259,40 @@ export default function Events() {
                 <table className="table wide">
                   <thead>
                     <tr>
-                      <th onClick={() => onSort("date")} className="sortable">
-                        Date {sortKey === "date" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-                      </th>
-                      <th onClick={() => onSort("name")} className="sortable">
-                        Name {sortKey === "name" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-                      </th>
-                      <th>Time</th>
-                      <th>Location</th>
-                      <th>Capacity</th>
-                      <th>Price</th>
-                      <th onClick={() => onSort("active")} className="sortable">
-                        Active {sortKey === "active" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-                      </th>
-                      <th>ID</th>
-                      <th />
+                        <th className="sortable nowrap" onClick={() => onSort("date")}>Date {sortKey === "date" ? (sortDir === "asc" ? "▲" : "▼") : ""}</th>
+                        <th className="sortable">Name {sortKey === "name" ? (sortDir === "asc" ? "▲" : "▼") : ""}</th>
+                        <th className="nowrap">Time</th>
+                        <th>Location</th>
+                        <th className="nowrap">Capacity</th>
+                        <th className="nowrap">Price</th>
+                        <th className="sortable nowrap" onClick={() => onSort("active")}>Active {sortKey === "active" ? (sortDir === "asc" ? "▲" : "▼") : ""}</th>
+                        <th className="nowrap">ID</th>
+                        <th className="nowrap" />
                     </tr>
-                  </thead>
-                  <tbody>
+                    </thead>
+                    <tbody>
                     {paged.map((r) => (
-                      <tr key={r.event_id}>
-                        <td>{fmtDate(r.date)}</td>
+                        <tr key={r.event_id}>
+                        <td className="nowrap">{fmtDate(r.date)}</td>
                         <td>{r.name}</td>
-                        <td>{fmtTime(r.start_time, r.end_time)}</td>
+                        <td className="nowrap">{fmtTime(r.start_time, r.end_time)}</td>
                         <td>{r.location}</td>
-                        <td>{r.capacity}</td>
-                        <td>{fmtPriceCents(r.price_cents)}</td>
-                        <td>
-                          <button className="btn btn-sm"
-                            onClick={() => toggleActive(r)}
-                            title="Toggle active">
+                        <td className="nowrap">{r.capacity}</td>
+                        <td className="nowrap">{fmtPriceCents(r.price_cents)}</td>
+                        <td className="nowrap">
+                            <button className="btn btn-sm" onClick={() => toggleActive(r)} title="Toggle active">
                             {Number(r.is_active) ? "On" : "Off"}
-                          </button>
+                            </button>
                         </td>
-                        <td><code>{r.event_id}</code></td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <Link className="btn btn-sm" to={`/events/${r.event_id}`}>View</Link>
-                          <Link className="btn btn-sm" to={`/events/${r.event_id}/edit`}>Edit</Link>
-                          <button className="btn btn-sm" onClick={() => setToDelete(r)}>Delete</button>
+                        <td className="nowrap"><code>{r.event_id}</code></td>
+                        <td className="nowrap" style={{ whiteSpace: "nowrap" }}>
+                            <Link className="btn btn-sm" to={`/events/${r.event_id}`}>View</Link>
+                            <Link className="btn btn-sm" to={`/events/${r.event_id}/edit`}>Edit</Link>
+                            <button className="btn btn-sm" onClick={() => setToDelete(r)}>Delete</button>
                         </td>
-                      </tr>
+                        </tr>
                     ))}
-                  </tbody>
+                    </tbody>
                 </table>
               </div>
 

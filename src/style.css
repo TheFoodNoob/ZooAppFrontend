@@ -138,7 +138,8 @@ textarea { resize: vertical; min-height: 40px; }
 .table th, .table td { padding: 14px; border-bottom: 1px solid var(--border); }
 .table th { text-align: left; }
 .table thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
-.table.wide th, .table.wide td { white-space: nowrap; }
+.table.wide th,.table.wide td {white-space: normal;}
+.nowrap { white-space: nowrap; }
 .table.wide th.sortable { cursor: pointer; }
 
 /* Long tables scroll; header stays visible */
