@@ -1,25 +1,57 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
-import fetchAuth, { parseJsonWithDetail } from "../../utils/fetchAuth";
+import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 import Toast from "../../components/Toast";
 
-const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // HH:MM 24h
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function fmtDateIn(val) {
+  if (!val) return "";
+  if (DATE_RE.test(val)) return val;
+  try { return new Date(val).toISOString().slice(0, 10); } catch { return ""; }
+}
+function toInt(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+function compareTimes(a, b) {
+  // returns positive if b>a
+  const [ah, am] = a.split(":").map(Number);
+  const [bh, bm] = b.split(":").map(Number);
+  return (bh - ah) * 60 + (bm - am);
+}
 
 export default function EventEdit() {
   const { id } = useParams();
+  const isNew = !id;
   const nav = useNavigate();
-  const { token, user, logout } = useAuth();
-  const isManager = user?.role === "admin" || user?.role === "ops_manager";
+  const { logout, token } = useAuth();
 
-  const [form, setForm] = useState(null);
-  const [errs, setErrs] = useState([]);
+  const [form, setForm] = useState({
+    date: "",
+    name: "",
+    start_time: "",
+    end_time: "",
+    location: "",
+    capacity: "",
+    price_cents: "",
+    description: "",
+    is_active: 1,
+  });
+  const [fe, setFe] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
   const [toast, setToast] = useState({ open: false, type: "info", text: "" });
   const showToast = (type, text) => setToast({ open: true, type, text });
 
+  // ----- LOAD (edit mode) -----
   useEffect(() => {
+    if (isNew) return;
     (async () => {
+      setErr("");
       try {
         const res = await fetchAuth(
           `${api}/api/events/${id}`,
@@ -29,157 +61,280 @@ export default function EventEdit() {
         const { ok, data, detail } = await parseJsonWithDetail(res);
         if (!ok) throw new Error(detail || "Failed to load event");
         setForm({
+          date: fmtDateIn(data.date),
           name: data.name || "",
-          date: data.date || "",
           start_time: data.start_time || "",
           end_time: data.end_time || "",
           location: data.location || "",
           capacity: data.capacity ?? "",
           price_cents: data.price_cents ?? "",
           description: data.description || "",
-          is_active: Number(data.is_active ?? 1),
+          is_active: Number(data.is_active) ?? 1,
         });
+        setFe({});
       } catch (e) {
-        setErrs([e.message]);
+        setErr(e.message);
         showToast("error", e.message);
       }
     })();
-  }, [id, token, logout]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-  function collectErrors(f) {
-    const out = [];
-    if (!f.name.trim()) out.push("Name is required.");
-    if (!f.date) out.push("Date is required (YYYY-MM-DD).");
-    if (f.start_time && !timeRe.test(f.start_time)) out.push("Start time must be HH:MM (24h).");
-    if (f.end_time && !timeRe.test(f.end_time)) out.push("End time must be HH:MM (24h).");
-    if (f.capacity !== "" && (!/^\d+$/.test(String(f.capacity)) || Number(f.capacity) < 0))
-      out.push("Capacity must be a non-negative integer.");
-    if (f.price_cents !== "" && (!/^\d+$/.test(String(f.price_cents)) || Number(f.price_cents) < 0))
-      out.push("Price (cents) must be a non-negative integer.");
-    return out;
+  function setField(k, v) {
+    setForm((f) => ({ ...f, [k]: v }));
   }
 
-  useEffect(() => { if (form) setErrs(collectErrors(form)); }, [form]);
+  // ----- VALIDATIONS -----
+  const checks = useMemo(
+    () => ({
+      date: (v) => (!v ? "Date is required" : DATE_RE.test(v) ? "" : "Use YYYY-MM-DD"),
+      name: (v) => (!v ? "Name is required" : v.trim().length < 2 ? "Name is too short" : ""),
+      start_time: (v) => (!v ? "Start time is required" : TIME_RE.test(v) ? "" : "HH:MM (24h)"),
+      end_time: (v) => (!v ? "End time is required" : TIME_RE.test(v) ? "" : "HH:MM (24h)"),
+      location: (v) => (!v ? "Location is required" : ""),
+      capacity: (v) => {
+        if (v === "" || v === null) return "Capacity is required";
+        const n = toInt(v);
+        if (!Number.isFinite(n)) return "Capacity must be an integer";
+        if (n <= 0) return "Capacity must be > 0";
+        return "";
+      },
+      price_cents: (v) => {
+        if (v === "" || v === null) return "Price (cents) is required";
+        const n = toInt(v);
+        if (!Number.isFinite(n)) return "Price must be an integer (cents)";
+        if (n < 0) return "Price can't be negative";
+        return "";
+      },
+      is_active: (v) => (v === "" || v === null ? "Active is required" : ""),
+      // description optional — no error
+    }),
+    []
+  );
 
-  async function save(e) {
+  // derive an extra rule: end_time >= start_time when both valid
+  let timeOrderError = "";
+    if (TIME_RE.test(form.start_time) && TIME_RE.test(form.end_time)) {
+    const diff = compareTimes(form.start_time, form.end_time);
+    if (diff <= 0) timeOrderError = "End time must be after start time";
+    }
+
+  function validate(show = true) {
+    const errs = {};
+    for (const [k, fn] of Object.entries(checks)) {
+      const msg = fn(form[k]);
+      if (msg) errs[k] = msg;
+    }
+    if (!errs.start_time && !errs.end_time && timeOrderError) {
+      errs.end_time = timeOrderError;
+    }
+    if (show) setFe(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  const isFormValid = validate(false);
+
+  // ----- SUBMIT -----
+  async function onSubmit(e) {
     e.preventDefault();
-    if (!isManager) { showToast("error", "Only admin or ops_manager can update events."); return; }
-    const problems = collectErrors(form);
-    if (problems.length) { setErrs(problems); showToast("error", "Please fix the highlighted issues."); return; }
+    if (!validate(true)) return;
 
+    const payload = {
+      date: form.date,
+      name: form.name.trim(),
+      start_time: form.start_time, // required, validated
+      end_time: form.end_time,     // required, validated
+      location: form.location.trim(),
+      capacity: toInt(form.capacity),     // validated integer > 0
+      price_cents: toInt(form.price_cents), // validated integer >= 0
+      description: form.description || "",
+      is_active: Number(form.is_active) === 1 ? 1 : 0,
+    };
+
+    setSaving(true);
+    setErr("");
     try {
-      const payload = {
-        name: form.name.trim(),
-        date: form.date,
-        start_time: form.start_time || null,
-        end_time: form.end_time || null,
-        location: form.location || null,
-        capacity: form.capacity === "" ? null : Number(form.capacity),
-        price_cents: form.price_cents === "" ? null : Number(form.price_cents),
-        description: form.description || null,
-        is_active: Number(form.is_active),
-      };
-
-      const res = await fetchAuth(
-        `${api}/api/events/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+      if (isNew) {
+        const res = await fetchAuth(
+          `${api}/api/events`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
           },
-          body: JSON.stringify(payload),
-        },
-        logout
-      );
-
-      const { ok, detail } = await parseJsonWithDetail(res);
-      if (!ok) throw new Error(detail || "Update failed");
-
-      showToast("success", "Event updated");
-      nav(`/events/${id}`);
-    } catch (e) {
-      showToast("error", e.message);
+          logout
+        );
+        const info = await parseJsonWithDetail(res);
+        if (!info.ok) throw new Error(info.detail || "Create failed");
+        const newId = info.data?.event_id ?? info.data?.id;
+        showToast("success", "Event created");
+        nav(newId ? `/events/${newId}` : "/events", { replace: true });
+      } else {
+        const res = await fetchAuth(
+          `${api}/api/events/${id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+          },
+          logout
+        );
+        const info = await parseJsonWithDetail(res);
+        if (!info.ok) throw new Error(info.detail || "Update failed");
+        showToast("success", "Event updated");
+        setTimeout(() => nav(`/events/${id}`), 250);
+      }
+    } catch (e2) {
+      setErr(e2.message);
+      showToast("error", e2.message);
+    } finally {
+      setSaving(false);
     }
   }
 
-  if (!form) return <div className="page">Loading…</div>;
-
   return (
-    <div className="page">
-      <div className="row-between" style={{ marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>Edit Event</h2>
-        <Link className="btn btn-sm" to={`/events/${id}`}>Cancel</Link>
+    <div className="container container-wide">
+      <div className="header-row">
+        <h1>{isNew ? "New Event" : "Edit Event"}</h1>
+        <div className="row-gap">
+          <button className="btn" onClick={() => nav(-1)}>Back</button>
+          {!isNew && <button className="btn" onClick={() => nav(`/events/${id}`)}>View</button>}
+        </div>
       </div>
 
-      <form onSubmit={save} className="card card--wide">
+      <form className="card card--wide" onSubmit={onSubmit} noValidate>
+        {err && <div className="error" style={{ marginBottom: 12 }}>{err}</div>}
+
         <div className="two-col">
-          <div>
-            <label>Name</label>
-            <input value={form.name} onChange={e=>setForm({ ...form, name: e.target.value })} />
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
-              Example: Summer Night Safari
-            </div>
-          </div>
-          <div>
+          <div className="field">
             <label>Date</label>
-            <input type="date" value={form.date} onChange={e=>setForm({ ...form, date: e.target.value })}/>
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>YYYY-MM-DD</div>
+            <input
+              className="input"
+              type="date"
+              required
+              value={form.date}
+              onChange={(e) => setField("date", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.date && <div className="help error">{fe.date}</div>}
           </div>
 
-          <div>
-            <label>Start time (optional)</label>
-            <input placeholder="HH:MM" value={form.start_time} onChange={e=>setForm({ ...form, start_time: e.target.value })}/>
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>24h, e.g., 18:30</div>
-          </div>
-          <div>
-            <label>End time (optional)</label>
-            <input placeholder="HH:MM" value={form.end_time} onChange={e=>setForm({ ...form, end_time: e.target.value })}/>
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>24h, e.g., 21:00</div>
-          </div>
-
-          <div>
-            <label>Location (optional)</label>
-            <input value={form.location} onChange={e=>setForm({ ...form, location: e.target.value })}/>
-          </div>
-          <div>
-            <label>Capacity (optional)</label>
-            <input type="number" min="0" step="1" value={form.capacity} onChange={e=>setForm({ ...form, capacity: e.target.value })}/>
+          <div className="field">
+            <label>Name</label>
+            <input
+              className="input"
+              required
+              placeholder="Event name"
+              value={form.name}
+              onChange={(e) => setField("name", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.name && <div className="help error">{fe.name}</div>}
           </div>
 
-          <div>
-            <label>Price (cents, optional)</label>
-            <input type="number" min="0" step="1" value={form.price_cents} onChange={e=>setForm({ ...form, price_cents: e.target.value })}/>
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
-              2500 = $25.00
-            </div>
+          <div className="field">
+            <label>Start time (HH:MM)</label>
+            <input
+              className="input"
+              required
+              placeholder="13:30"
+              value={form.start_time}
+              onChange={(e) => setField("start_time", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.start_time && <div className="help error">{fe.start_time}</div>}
           </div>
-          <div>
+
+          <div className="field">
+            <label>End time (HH:MM)</label>
+            <input
+              className="input"
+              required
+              placeholder="15:00"
+              value={form.end_time}
+              onChange={(e) => setField("end_time", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.end_time && <div className="help error">{fe.end_time}</div>}
+          </div>
+
+          <div className="field">
+            <label>Location</label>
+            <input
+              className="input"
+              required
+              placeholder="Location"
+              value={form.location}
+              onChange={(e) => setField("location", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.location && <div className="help error">{fe.location}</div>}
+          </div>
+
+          <div className="field">
+            <label>Capacity</label>
+            <input
+              className="input"
+              required
+              placeholder="e.g., 50"
+              value={form.capacity}
+              onChange={(e) => setField("capacity", e.target.value)}
+              onBlur={() => validate()}
+            />
+            {fe.capacity && <div className="help error">{fe.capacity}</div>}
+          </div>
+
+          <div className="field">
+            <label>Price (cents)</label>
+            <input
+              className="input"
+              required
+              placeholder="2500"
+              value={form.price_cents}
+              onChange={(e) => setField("price_cents", e.target.value)}
+              onBlur={() => validate()}
+            />
+            <div className="help">2500 = $25.00</div>
+            {fe.price_cents && <div className="help error">{fe.price_cents}</div>}
+          </div>
+
+          <div className="field">
             <label>Active</label>
-            <select value={form.is_active} onChange={e=>setForm({ ...form, is_active: Number(e.target.value) })}>
+            <select
+              className="input"
+              required
+              value={form.is_active}
+              onChange={(e) => setField("is_active", e.target.value)}
+              onBlur={() => validate()}
+            >
               <option value={1}>1</option>
               <option value={0}>0</option>
             </select>
+            {fe.is_active && <div className="help error">{fe.is_active}</div>}
           </div>
 
-          <div className="span-2">
+          <div className="field span-2">
             <label>Description (optional)</label>
-            <input value={form.description} onChange={e=>setForm({ ...form, description: e.target.value })}/>
+            <input
+              className="input"
+              placeholder="Short description"
+              value={form.description}
+              onChange={(e) => setField("description", e.target.value)}
+            />
           </div>
         </div>
 
-        {errs.length > 0 && (
-          <div className="error" style={{ marginTop: 12 }}>
-            <strong>Can’t save yet:</strong>
-            <ul style={{ margin: "8px 0 0 18px" }}>
-              {errs.map((m, i) => <li key={i}>{m}</li>)}
-            </ul>
-          </div>
-        )}
-
-        <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={errs.length>0}>
-          Save
-        </button>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn" type="submit" disabled={saving || !isFormValid}>
+            {saving ? (isNew ? "Creating…" : "Saving…") : (isNew ? "Create" : "Save")}
+          </button>
+        </div>
       </form>
 
       {toast.open && (

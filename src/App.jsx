@@ -159,6 +159,17 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* >>> Add this route BEFORE /events/:id <<< */}
+        <Route
+          path="/events/new"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager"]}>
+              <EventEdit />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/events/:id"
           element={

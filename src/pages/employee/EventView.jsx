@@ -1,63 +1,108 @@
-import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
-import fetchAuth, { parseJsonWithDetail } from "../../utils/fetchAuth";
+import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 import Toast from "../../components/Toast";
+
+function fmtDate(d) {
+  if (!d) return "-";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  try { return new Date(d).toISOString().slice(0, 10); } catch { return String(d); }
+}
+function fmtTime(s, e) {
+  const a = s || "";
+  const b = e || "";
+  if (!a && !b) return "-";
+  return `${a}${a && b ? " – " : ""}${b}`;
+}
+function fmtPriceCents(p) {
+  if (p == null || isNaN(p)) return "-";
+  return `$${(Number(p) / 100).toFixed(2)}`;
+}
+const Badge = ({ on }) => (
+  <span className={`badge ${on ? "green" : ""}`}>{on ? "Active" : "Inactive"}</span>
+);
 
 export default function EventView() {
   const { id } = useParams();
-  const { token, logout } = useAuth();
+  const nav = useNavigate();
+  const { logout, token, user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "ops_manager";
 
-  const [event, setEvent] = useState(null);
+  const [ev, setEv] = useState(null);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState({ open: false, type: "info", text: "" });
   const showToast = (type, text) => setToast({ open: true, type, text });
+  const [updatedAt, setUpdatedAt] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetchAuth(
-          `${api}/api/events/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-          logout
-        );
-        const { ok, data, detail } = await parseJsonWithDetail(res);
-        if (!ok) throw new Error(detail || "Failed to load event");
-        setEvent(data);
-      } catch (e) {
-        setErr(e.message);
-        showToast("error", e.message);
-      }
-    })();
-  }, [id, token, logout]);
+  async function load() {
+    setErr("");
+    setUpdatedAt("");
+    try {
+      const res = await fetchAuth(
+        `${api}/api/events/${id}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        logout
+      );
+      const { ok, data, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Failed to load event");
+      setEv(data);
+      setUpdatedAt(new Date().toLocaleString());
+    } catch (e) {
+      setErr(e.message);
+      showToast("error", e.message);
+    }
+  }
 
-  if (err) return <div className="page"><div className="error">{err}</div></div>;
-  if (!event) return <div className="page">Loading…</div>;
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
-  const price = event.price_cents == null ? "-" : `$${(Number(event.price_cents)/100).toLocaleString()}`;
-  const time = (event.start_time || event.end_time)
-    ? `${event.start_time || ""}${event.end_time ? ` - ${event.end_time}` : ""}`
-    : "-";
+  const fields = useMemo(() => {
+    if (!ev) return [];
+    return [
+      ["Date", fmtDate(ev.date)],
+      ["Time", fmtTime(ev.start_time, ev.end_time)],
+      ["Location", ev.location || "-"],
+      ["Capacity", ev.capacity ?? "-"],
+      ["Price", fmtPriceCents(ev.price_cents)],
+      ["Active", <Badge key="b" on={Number(ev.is_active) === 1} />],
+      ["Description", ev.description || "-"],
+      ["Event ID", <code key="id" style={{ userSelect: "all" }}>{ev.event_id}</code>],
+    ];
+  }, [ev]);
 
   return (
-    <div className="page">
-      <div className="row-between" style={{ marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>{event.name}</h2>
-        <div>
-          <Link className="btn btn-sm" to={`/events/${id}/edit`} style={{ marginRight: 8 }}>Edit</Link>
-          <Link className="btn btn-sm" to="/events">Back</Link>
+    <div className="container">
+      <div className="header-row">
+        <h1>Event Details</h1>
+        <div className="row-gap">
+          <button className="btn" onClick={load}>Refresh</button>
+          {canEdit && <Link className="btn primary" to={`/events/${id}/edit`}>Edit</Link>}
+          <Link className="btn" to="/events">Back to list</Link>
         </div>
       </div>
 
-      <div className="panel">
-        <p><strong>Date:</strong> {event.date || "-"}</p>
-        <p><strong>Time:</strong> {time}</p>
-        <p><strong>Location:</strong> {event.location || "-"}</p>
-        <p><strong>Capacity:</strong> {event.capacity ?? "-"}</p>
-        <p><strong>Price:</strong> {price}</p>
-        <p><strong>Active:</strong> {Number(event.is_active) ? "1" : "0"}</p>
-        <p><strong>Description:</strong> {event.description || "-"}</p>
+      <div className="card">
+        {err && <div className="error" style={{ marginBottom: 12 }}>{err}</div>}
+        {!ev ? (
+          <div>Loading…</div>
+        ) : (
+          <div className="grid" style={{ gridTemplateColumns: "200px 1fr", rowGap: 8 }}>
+            <div style={{ gridColumn: "1 / -1", marginBottom: 8, color: "#666" }}>
+              Last updated: {updatedAt || "—"}
+            </div>
+            <table className="table">
+              <tbody>
+                {fields.map(([label, value]) => (
+                  <tr key={label}>
+                    <th style={{ width: 180 }}>{label}</th>
+                    <td>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {toast.open && (

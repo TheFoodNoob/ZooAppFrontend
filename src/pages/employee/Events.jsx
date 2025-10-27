@@ -1,324 +1,239 @@
-// src/pages/employee/Events.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../api";
 import Toast from "../../components/Toast";
 import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
+import { rowsToCsv, downloadCsv } from "../../utils/csv";
 
-const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-const timeRe = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const PAGE_SIZE = 10;
+
+function fmtDate(d) {
+  if (!d) return "";
+  try {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    return new Date(d).toISOString().slice(0, 10);
+  } catch {
+    return String(d);
+  }
+}
+function fmtTime(s, e) {
+  const a = s || "";
+  const b = e || "";
+  if (!a && !b) return "";
+  return `${a}${a && b ? " – " : ""}${b}`;
+}
+function fmtPriceCents(p) {
+  if (p == null || isNaN(p)) return "";
+  return `$${(Number(p) / 100).toFixed(2)}`;
+}
 
 export default function Events() {
   const { token, user, logout } = useAuth();
-  const isManager = user?.role === "admin" || user?.role === "ops_manager";
 
-  const [list, setList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
-  const [toast, setToast] = useState({ open: false, type: "success", text: "" });
+  const [toast, setToast] = useState({ open: false, type: "info", text: "" });
   const showToast = (type, text) => setToast({ open: true, type, text });
 
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
   const [q, setQ] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({
-    name: "", date: "", start_time: "", end_time: "",
-    location: "", capacity: "", price_cents: "", description: "", is_active: 1,
-  });
-  const [fe, setFe] = useState({});
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
 
-  const Help = ({ children }) => <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{children}</div>;
-  const FieldError = ({ msg }) => (msg ? <div style={{ color: "#a40000", fontSize: 12, marginTop: 4 }}>{msg}</div> : null);
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("asc");
 
- 
-  function toIsoDate(d) {
-    if (!d) return "";
-    // If it's already YYYY-MM-DD, keep it
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const [page, setPage] = useState(1);
 
-    // Try MM/DD/YYYY or M/D/YYYY
-    const mdy = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (mdy) {
-        const mm = String(mdy[1]).padStart(2, "0");
-        const dd = String(mdy[2]).padStart(2, "0");
-        return `${mdy[3]}-${mm}-${dd}`;
-    }
-    // As a safe default, return original; validation will catch if still bad
-    return d;
-    }
-
-  function validateField(name, v) {
-    const s = (v ?? "").toString().trim();
-    switch (name) {
-      case "name":
-        if (!s) return "Name is required.";
-        if (s.length > 120) return "Name must be ≤ 120 chars.";
-        return "";
-      case "date":
-        if (!dateRe.test(s)) return "Date must be YYYY-MM-DD.";
-        return "";
-      case "start_time":
-      case "end_time":
-        if (!s) return "";
-        if (!timeRe.test(s)) return "Time must be HH:MM.";
-        return "";
-      case "location":
-        if (s && s.length > 120) return "Location must be ≤ 120 chars.";
-        return "";
-      case "capacity":
-        if (!s) return "";
-        if (!/^\d+$/.test(s)) return "Capacity must be a non-negative integer.";
-        return "";
-      case "price_cents":
-        if (!s) return "";
-        if (!/^\d+$/.test(s)) return "Price must be a non-negative integer (in cents).";
-        return "";
-      case "description":
-        if (s && s.length > 500) return "Description must be ≤ 500 chars.";
-        return "";
-      default:
-        return "";
-    }
-  }
-  function validateAll(form) {
-    const errors = {};
-    if (!form.name?.trim()) errors.name = "Event name is required";
-    if (!form.date?.trim()) errors.date = "Date is required";
-    if (!form.start_time?.trim()) errors.start_time = "Start time is required"; // ✅ new
-    // (optional) validate format like 09:30 if you want
-    return errors;
-    }
-
-
-  useEffect(() => { setFe(validateAll(form)); }, [form]);
-
+  useEffect(() => { load(); }, []);
   async function load() {
-    setLoading(true); setErr("");
+    setLoading(true);
+    setErr("");
     try {
-      const res = await fetchAuth(`${api}/api/events`, { headers: { Authorization: `Bearer ${token}` } }, logout);
+      const res = await fetchAuth(
+        `${api}/api/events`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        logout
+      );
       const { ok, data, detail } = await parseJsonWithDetail(res);
-      if (!ok) throw new Error(detail || "Failed to load events");
-      setList(data || []);
+      if (!ok) throw new Error(detail || "Failed to fetch events");
+      setRows(Array.isArray(data) ? data : []);
     } catch (e) {
-      setErr(e.message); showToast("error", e.message);
-    } finally { setLoading(false); }
-  }
-  useEffect(() => { load(); }, []); // initial
-
-  const bind = (name) => ({
-    value: form[name],
-    onChange: (e) => {
-      const v = e.target.value;
-      setForm((f) => ({ ...f, [name]: v }));
-      const msg = validateField(name, v);
-      setFe((p) => { const n = { ...p }; if (msg) n[name] = msg; else delete n[name]; return n; });
-    },
-    onBlur: () => {
-      const msg = validateField(name, form[name]);
-      setFe((p) => { const n = { ...p }; if (msg) n[name] = msg; else delete n[name]; return n; });
+      setErr(e.message);
+      showToast("error", e.message);
+    } finally {
+      setLoading(false);
     }
-  });
-
-  
- async function createEvent(e) {
-    e.preventDefault();
-    if (!isManager) return setErr("Only admin or ops_manager can create events.");
-
-    const all = validateAll(form);
-    setFe(all);
-    if (Object.keys(all).length) {
-        showToast("error", "Please fix the highlighted issues.");
-        return;
-    }
-
-    try {
-        const payload = {
-        ...form,
-        // normalize date to ISO for backend validator
-        date: toIsoDate(form.date),
-
-        // normalize optional fields
-        capacity: form.capacity === "" ? null : Number(form.capacity),
-        price_cents: form.price_cents === "" ? null : Number(form.price_cents),
-        location: form.location || null,
-        description: form.description || null,
-        start_time: form.start_time || null, // "HH:MM" is fine for MySQL TIME
-        end_time: form.end_time || null,
-        is_active: Number(form.is_active),
-        };
-
-        const res = await fetchAuth(`${api}/api/events`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-        }, logout);
-
-        const { ok, data, detail } = await parseJsonWithDetail(res);
-        if (!ok) throw new Error(detail || "Create failed");
-
-        showToast("success", `Event created (id ${data.event_id})`);
-        setForm({ name:"", date:"", start_time:"", end_time:"", location:"", capacity:"", price_cents:"", description:"", is_active:1 });
-        setFe({});
-        await load();
-        setShowCreate(false);
-    } catch (e) {
-        setErr(e.message);
-        showToast("error", e.message);
-    }
-}
-
-
-  async function remove(id) {
-    if (!isManager) return setErr("Only admin or ops_manager can delete events.");
-    if (!confirm("Delete this event?")) return;
-    try {
-      const res = await fetchAuth(`${api}/api/events/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }, logout);
-      const { ok, detail } = await parseJsonWithDetail(res);
-      if (!ok) throw new Error(detail || "Delete failed");
-      showToast("success","Event deleted"); await load();
-    } catch (e) { setErr(e.message); showToast("error", e.message); }
   }
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return list;
-    return list.filter(ev =>
-      ev.name.toLowerCase().includes(s) ||
-      String(ev.location ?? "").toLowerCase().includes(s) ||
-      String(ev.date).includes(s)
-    );
-  }, [q, list]);
+    const term = q.trim().toLowerCase();
+    const s = start || "";
+    const e = end || "";
+
+    let out = rows.filter((r) => {
+      const hitQ =
+        !term ||
+        (r.name || "").toLowerCase().includes(term) ||
+        (r.location || "").toLowerCase().includes(term) ||
+        (r.description || "").toLowerCase().includes(term);
+
+      const hitStart = !s || String(r.date) >= s;
+      const hitEnd = !e || String(r.date) <= e;
+
+      return hitQ && hitStart && hitEnd;
+    });
+
+    out.sort((a, b) => {
+      let A, B;
+      if (sortKey === "name") {
+        A = (a.name || "").toLowerCase();
+        B = (b.name || "").toLowerCase();
+      } else if (sortKey === "active") {
+        A = Number(a.is_active);
+        B = Number(b.is_active);
+      } else {
+        A = a.date || "";
+        B = b.date || "";
+      }
+      if (A < B) return sortDir === "asc" ? -1 : 1;
+      if (A > B) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return out;
+  }, [rows, q, start, end, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageSafe = Math.min(page, totalPages);
+  const paged = useMemo(() => {
+    const startIdx = (pageSafe - 1) * PAGE_SIZE;
+    return filtered.slice(startIdx, startIdx + PAGE_SIZE);
+  }, [filtered, pageSafe]);
+
+  function exportCsv() {
+    const csv = rowsToCsv(filtered, [
+      { header: "Date",     get: r => fmtDate(r.date) },
+      { header: "Name",     get: r => r.name ?? "" },
+      { header: "Time",     get: r => fmtTime(r.start_time, r.end_time) },
+      { header: "Location", get: r => r.location ?? "" },
+      { header: "Capacity", get: r => r.capacity ?? "" },
+      { header: "Price",    get: r => fmtPriceCents(r.price_cents) },
+      { header: "Active",   get: r => Number(r.is_active) ? "1" : "0" },
+      { header: "Description", get: r => r.description ?? "" },
+      { header: "ID",       get: r => r.event_id },
+    ]);
+    downloadCsv("events.csv", csv);
+  }
+
+  function onSort(k) {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
+  }
 
   return (
-    <div className="page">
-      <div className="row-between" style={{ marginBottom: 10 }}>
-        <h2 style={{ margin: 0 }}>Events</h2>
-        {isManager && (
-          <button type="button" className="btn btn-sm" onClick={() => setShowCreate(v => !v)}>
-            {showCreate ? "Hide Form" : "Add Event"}
-          </button>
-        )}
-      </div>
-
-      {err && <div className="error" style={{ marginBottom: 10 }}>{err}</div>}
-
-      {isManager && showCreate && (
-        <form onSubmit={createEvent} className="card card--wide" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginBottom: 12 }}>Add Event</h3>
-          <div className="two-col">
-            <div>
-              <label>Name</label>
-              <input required maxLength={120} {...bind("name")} />
-              <FieldError msg={fe.name} />
-            </div>
-            <div>
-              <label>Date</label>
-              <input type="date" required {...bind("date")} />
-              <Help>YYYY-MM-DD</Help>
-              <FieldError msg={fe.date} />
-            </div>
-            <div>
-              <label>Start time (optional)</label>
-              <input placeholder="09:30" {...bind("start_time")} />
-              <Help>HH:MM (24h)</Help>
-              <FieldError msg={fe.start_time} />
-            </div>
-            <div>
-              <label>End time (optional)</label>
-              <input placeholder="17:00" {...bind("end_time")} />
-              <Help>HH:MM (24h)</Help>
-              <FieldError msg={fe.end_time} />
-            </div>
-            <div>
-              <label>Location (optional)</label>
-              <input maxLength={120} {...bind("location")} />
-              <FieldError msg={fe.location} />
-            </div>
-            <div>
-              <label>Capacity (optional)</label>
-              <input type="number" min="0" step="1" {...bind("capacity")} />
-              <FieldError msg={fe.capacity} />
-            </div>
-            <div>
-              <label>Price (cents, optional)</label>
-              <input type="number" min="0" step="1" placeholder="1500" {...bind("price_cents")} />
-              <Help>Enter cents only. Example: 1500 = $15.00</Help>
-              <FieldError msg={fe.price_cents} />
-            </div>
-            <div className="span-2">
-              <label>Description (optional)</label>
-              <input maxLength={500} {...bind("description")} />
-              <FieldError msg={fe.description} />
-            </div>
-            <div>
-              <label>Active</label>
-              <select value={form.is_active} onChange={(e)=>setForm(f=>({ ...f, is_active: Number(e.target.value) }))}>
-                <option value={1}>1</option>
-                <option value={0}>0</option>
-              </select>
-            </div>
-          </div>
-
-          {Object.keys(fe).length > 0 && (
-            <div className="error" style={{ marginTop: 12 }}>
-              <strong>Can’t create yet:</strong>
-              <ul style={{ margin: "8px 0 0 18px" }}>
-                {Object.values(fe).map((m, i) => <li key={i}>{m}</li>)}
-              </ul>
-            </div>
+    <div className="container container-wide">
+      <div className="header-row">
+        <h1>Events</h1>
+        <div className="row-gap">
+          <button className="btn" onClick={exportCsv}>Export CSV</button>
+          {(user?.role === "admin" || user?.role === "ops_manager") && (
+            <Link className="btn primary" to="/events/new">+ New Event</Link>
           )}
+        </div>
+      </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button className="btn" type="submit" disabled={Object.keys(fe).length > 0}>Create</button>
-            <button type="button" className="btn btn-sm" onClick={()=>setShowCreate(false)}>Cancel</button>
+      {/* NEW: two-column responsive layout */}
+      <div className="page-grid">
+        {/* Left: Filters */}
+        <aside className="card sticky">
+          <div className="grid grid-1">
+            <div className="field">
+              <label>Search</label>
+              <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="name, location, description…" />
+            </div>
+            <div className="field">
+              <label>Start date</label>
+              <input className="input" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>End date</label>
+              <input className="input" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+            </div>
+            <div className="field">
+              <button className="btn block" onClick={() => { setQ(""); setStart(""); setEnd(""); }}>Clear</button>
+            </div>
           </div>
-        </form>
+        </aside>
+
+        {/* Right: Table */}
+        <section className="card">
+          {err && <div className="error" style={{ marginBottom: 12 }}>{err}</div>}
+          {loading ? (
+            <div>Loading…</div>
+          ) : (
+            <>
+              <div className="table-wrap">
+                <table className="table wide">
+                  <thead>
+                    <tr>
+                      <th onClick={() => onSort("date")} className="sortable">
+                        Date {sortKey === "date" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                      </th>
+                      <th onClick={() => onSort("name")} className="sortable">
+                        Name {sortKey === "name" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                      </th>
+                      <th>Time</th>
+                      <th>Location</th>
+                      <th>Capacity</th>
+                      <th>Price</th>
+                      <th onClick={() => onSort("active")} className="sortable">
+                        Active {sortKey === "active" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                      </th>
+                      <th>ID</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((r) => (
+                      <tr key={r.event_id}>
+                        <td>{fmtDate(r.date)}</td>
+                        <td>{r.name}</td>
+                        <td>{fmtTime(r.start_time, r.end_time)}</td>
+                        <td>{r.location}</td>
+                        <td>{r.capacity}</td>
+                        <td>{fmtPriceCents(r.price_cents)}</td>
+                        <td>{Number(r.is_active) ? "1" : "0"}</td>
+                        <td><code>{r.event_id}</code></td>
+                        <td><Link className="btn" to={`/events/${r.event_id}`}>View</Link></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="row-between pager">
+                <div>Page {pageSafe} of {totalPages}</div>
+                <div className="row-gap">
+                  <button className="btn" onClick={() => setPage(1)} disabled={pageSafe <= 1}>« First</button>
+                  <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe <= 1}>‹ Prev</button>
+                  <button className="btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe >= totalPages}>Next ›</button>
+                  <button className="btn" onClick={() => setPage(totalPages)} disabled={pageSafe >= totalPages}>Last »</button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+
+      {toast.open && (
+        <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />
       )}
-
-      <h3 style={{ margin: "0 0 8px 0" }}>Search</h3>
-      <div className="row" style={{ marginBottom: 14 }}>
-        <input className="input" placeholder="Search name, location, date…" value={q} onChange={(e)=>setQ(e.target.value)} />
-        <button className="btn" onClick={load}>Refresh</button>
-      </div>
-
-      <div className="panel">
-        {loading ? <div>Loading…</div> : (
-          <table className="table" style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Name</th>
-                <th>Time</th>
-                <th>Location</th>
-                <th>Capacity</th>
-                <th>Price</th>
-                <th>Active</th>
-                <th style={{ width: 240 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ev) => (
-                <tr key={ev.event_id}>
-                  <td>{ev.date}</td>
-                  <td>{ev.name}</td>
-                  <td>{[ev.start_time, ev.end_time].filter(Boolean).join(" - ")}</td>
-                  <td>{ev.location || "-"}</td>
-                  <td>{ev.capacity ?? "-"}</td>
-                  <td>{ev.price_cents != null ? `$${(ev.price_cents/100).toFixed(2)}` : "-"}</td>
-                  <td>{Number(ev.is_active) ? "1" : "0"}</td>
-                  <td>
-                    <Link className="btn btn-sm" to={`/events/${ev.event_id}`}>View</Link>{" "}
-                    <Link className="btn btn-sm" to={`/events/${ev.event_id}/edit`}>Edit</Link>{" "}
-                    <button className="btn btn-sm" onClick={()=>remove(ev.event_id)} style={{ background: "#e57373", borderColor: "#cc5555" }}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {toast.open && <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />}
     </div>
   );
 }
