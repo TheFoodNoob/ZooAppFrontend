@@ -36,3 +36,32 @@ export const endpoints = {
     summary: () => url("api/reports/summary"),
   },
 };
+
+// ADD at bottom of src/api.js
+export async function fetchAuth(path, options = {}) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${api}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+    throw new Error("Unauthorized");
+  }
+  if (res.status === 403) {
+    window.location.href = "/403";
+    throw new Error("Forbidden");
+  }
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try { msg = (await res.json())?.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  try { return await res.json(); } catch { return null; }
+}
