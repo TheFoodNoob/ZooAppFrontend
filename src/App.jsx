@@ -16,7 +16,8 @@ import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
-import Animals from "./pages/employee/Animals.jsx";
+import Animals from "./pages/employee/Animals.jsx"
+import CAnimals from "./pages/customer/Animals.jsx"
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
@@ -103,12 +104,21 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
+        {/* Public pages */}
+         <Route
+          path="/animals"
+          element={
+              <CAnimals />
+          }
+        />
+
+        {/* Public login page */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
 
-        {/* Protected */}
+        {/* Protected pages */} 
         <Route
           path="/dashboard"
           element={
@@ -117,16 +127,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        <Route
-          path="/animals"
-          element={
-            <ProtectedRoute>
-              <Animals />
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/employees"
           element={
@@ -141,6 +141,12 @@ export default function App() {
             <ProtectedRoute>
               <EmployeeView />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animalStats"
+          element={
+              <Animals />
           }
         />
         <Route
