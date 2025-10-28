@@ -17,6 +17,7 @@ import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
 import Animals from "./pages/employee/Animals.jsx"
+import CAnimals from "./pages/customer/Animals.jsx"
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
@@ -25,20 +26,6 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
-import CAnimals from "./pages/customer/Animals.jsx"
-import CExhibits from "./pages/customer/Exhibit.jsx"
-import CEvents from "./pages/customer/Events.jsx"
-import Schedule from "./pages/customer/ZooScheduler.jsx"
-import Tickets from "./pages/customer/Tickets.jsx";
-
-function Forbidden() {
-  return (
-    <div className="page">
-      <h2>403 – Forbidden</h2>
-      <p>You don’t have permission to view this page.</p>
-    </div>
-  );
-}
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -115,36 +102,13 @@ export default function App() {
               <CAnimals />
           }
         />
-        <Route
-          path="/visit"
-          element={
-              <CEvents />
-          }
-        />
-        <Route
-          path="/exhibits"
-          element={
-              <CExhibits />
-          }
-        />
-        <Route
-          path="/buyTickets"
-          element={
-              <Tickets />
-          }
-        />
-        <Route
-          path="/scheduleEvents"
-          element={
-              <Schedule />
-          }
-        />
+
         {/* Public login page */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-        
+
         {/* Protected pages */} 
         <Route
           path="/dashboard"

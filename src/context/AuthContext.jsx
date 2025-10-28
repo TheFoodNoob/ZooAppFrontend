@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
 
   async function fetchMe(tok) {
     try {
-      const res = await fetch(api, {
+      const res = await fetch(`${api}/api/employee/me`, {
         headers: { Authorization: `Bearer ${tok}` },
       });
       if (res.status === 401) {
