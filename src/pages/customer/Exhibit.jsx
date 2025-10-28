@@ -10,7 +10,7 @@ export default function ExhibitsPage() {
         "Experience the vast savannas where our tiger roams freely. Learn how these animals adapt to life on the open plains.",
       animals: ["Saber Tooth Tiger"],
       image:
-        "",
+        "/public/img/tiger.jpg",
     },
     {
       id: 2,
@@ -19,7 +19,7 @@ export default function ExhibitsPage() {
         "Meet our playful seals as they swim, dive, and splash! Discover their unique adaptations to marine life.",
       animals: ["Harbor Seal"],
       image:
-        "",
+        "/public/img/seal.webp",
     },
   ];
 
@@ -40,7 +40,13 @@ export default function ExhibitsPage() {
             <img
               src={exhibit.image}
               alt={exhibit.name}
-              className="w-full h-60 object-cover"
+              style={{
+                width: "500px",
+                height: "500px",
+                objectFit: "contain",
+                display: "block",
+                margin: "0 auto",
+              }}
             />
             <div className="p-6">
               <h2 className="text-2xl font-semibold text-green-700 mb-2">

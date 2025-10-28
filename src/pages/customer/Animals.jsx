@@ -5,15 +5,15 @@ import React from "react";
 
 //TODO::Need To pull these via API
 const seal = {
-  name: "Sally",
+  name: "Sandy",
   species: "Harbor Seal",
-  image: "", 
+  image: "/public/img/harborSeal.webp", 
   description: "Sally is very friendly. She loves to play and eat fish!",
 };
 const tiger = {
   name: "Granger",
   species: "White Saber Tooth Tiger",
-  image: "",
+  image: "/public/img/tiger.jpg",
   description: "Granger wouldnt let a fly touch his food. He's very territorial but I hear he loves to tell secrets.",
 };
 
