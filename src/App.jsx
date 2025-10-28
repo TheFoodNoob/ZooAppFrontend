@@ -26,6 +26,14 @@ import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
 
+// NEW: role-specific base pages you added
+import Vet from "./pages/employee/Vet.jsx";
+import GateAgent from "./pages/employee/GateAgent.jsx";
+import Retail from "./pages/employee/Retail.jsx";
+import Coordinator from "./pages/employee/Coordinator.jsx";
+import Security from "./pages/employee/Security.jsx";
+
+
 import CAnimals from "./pages/customer/Animals.jsx"
 import CTickets from "./pages/customer/Tickets.jsx"
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
@@ -79,7 +87,6 @@ function KeeperDash() {
   const [tasks, setTasks] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState("");
-  // Persist the chosen filter so it sticks between page loads
   const [filter, setFilter] = React.useState(
     () => localStorage.getItem("keeperFilter") || "all"
   );
@@ -319,22 +326,7 @@ function KeeperDash() {
   );
 }
 
-/* ---------- Other role dash stubs (unchanged) ---------- */
-function VetDash() {
-  return (
-    <CardPage title="Vet Dashboard">
-      Upcoming visits & medical records here.
-    </CardPage>
-  );
-}
-function GateAgentDash() {
-  return (
-    <CardPage title="Gate Agent Dashboard">
-      Ticket scans & entry logs here.
-    </CardPage>
-  );
-}
-
+/* ---------- Ops Manager (unchanged) ---------- */
 function OpsManagerDash() {
   const { token } = useAuth();
   const [keepers, setKeepers] = React.useState([]);
@@ -473,35 +465,6 @@ function OpsManagerDash() {
   );
 }
 
-function RetailDash() {
-  return (
-    <CardPage title="Retail Dashboard">
-      POS summaries & inventory here.
-    </CardPage>
-  );
-}
-function CoordinatorDash() {
-  return (
-    <CardPage title="Coordinator Dashboard">
-      Scheduling & assignments here.
-    </CardPage>
-  );
-}
-function SecurityDash() {
-  return (
-    <CardPage title="Security Dashboard">
-      Incidents & patrol logs here.
-    </CardPage>
-  );
-}
-function AdminDash() {
-  return (
-    <CardPage title="Admin Dashboard">
-      Use Employees, Events, Reports in the nav.
-    </CardPage>
-  );
-}
-
 function Forbidden() {
   return (
     <div className="page">
@@ -599,7 +562,7 @@ function Nav() {
   );
 }
 
-/* ---------- App Routes (unchanged) ---------- */
+/* ---------- App Routes (updated to use your new role pages) ---------- */
 export default function App() {
   const { user } = useAuth();
 
@@ -682,9 +645,7 @@ export default function App() {
           path="/vet"
           element={
             <ProtectedRoute roles={["vet", "admin", "ops_manager"]}>
-              <CardPage title="Vet Dashboard">
-                Upcoming visits & medical records here.
-              </CardPage>
+              <Vet />
             </ProtectedRoute>
           }
         />
@@ -692,9 +653,7 @@ export default function App() {
           path="/gate"
           element={
             <ProtectedRoute roles={["gate_agent", "admin", "ops_manager"]}>
-              <CardPage title="Gate Agent Dashboard">
-                Ticket scans & entry logs here.
-              </CardPage>
+              <GateAgent />
             </ProtectedRoute>
           }
         />
@@ -710,7 +669,7 @@ export default function App() {
           path="/retail"
           element={
             <ProtectedRoute roles={["retail", "admin", "ops_manager"]}>
-              <RetailDash />
+              <Retail />
             </ProtectedRoute>
           }
         />
@@ -718,7 +677,7 @@ export default function App() {
           path="/coord"
           element={
             <ProtectedRoute roles={["coordinator", "admin", "ops_manager"]}>
-              <CoordinatorDash />
+              <Coordinator />
             </ProtectedRoute>
           }
         />
@@ -726,7 +685,7 @@ export default function App() {
           path="/security"
           element={
             <ProtectedRoute roles={["security", "admin", "ops_manager"]}>
-              <SecurityDash />
+              <Security />
             </ProtectedRoute>
           }
         />
@@ -734,7 +693,9 @@ export default function App() {
           path="/admin"
           element={
             <ProtectedRoute roles={["admin"]}>
-              <AdminDash />
+              <CardPage title="Admin Dashboard">
+                Use Employees, Events, Reports in the nav.
+              </CardPage>
             </ProtectedRoute>
           }
         />
