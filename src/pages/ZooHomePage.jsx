@@ -18,10 +18,6 @@ export default function Home() {
           <i className="fas fa-map"></i>
           <div>Plan Your Visit</div>
         </a>
-        <a href="/team" className="hero-card">
-          <i className="fas fa-users"></i>
-          <div>Team</div>
-        </a>
         <a href="/tickets" className="hero-card">
           <i className="fas fa-ticket-alt"></i>
           <div>Buy Tickets</div>
@@ -32,10 +28,14 @@ export default function Home() {
       <main className="page">
         {/* Example content */}
         <div className="grid">
-          <div className="card">Featured Animal 1</div>
-          <div className="card">Featured Animal 2</div>
-          <div className="card">Featured Animal 3</div>
+          <div className=" ">
+            <img src="../../public/img/lion.webp" alt="Lion" />
+          </div>
+          <div className=" ">
+            <img src="../../public/img/seal.webp" alt="Seal" />
+          </div>
         </div>
+
       </main>
     </div>
   );

@@ -44,7 +44,7 @@ export default function Login() {
     <div className="page center">
       <form className="card" onSubmit={onSubmit}>
         {/* Toggle Button */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+        {/* <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
           <button
             type="button"
             className="btn"
@@ -53,7 +53,7 @@ export default function Login() {
           >
             Switch to {isEmployee ? "Customer" : "Employee"} Login
           </button>
-        </div>
+        </div> */}
 
         <h2>{isEmployee ? "Employee/Admin Login" : "Customer Login"}</h2>
 

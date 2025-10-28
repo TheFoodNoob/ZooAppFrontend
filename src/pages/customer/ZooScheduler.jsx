@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function ZooScheduler() {
   const [events, setEvents] = useState([
@@ -12,27 +13,27 @@ export default function ZooScheduler() {
   const [desc, setDesc] = useState("");
 
   function addEvent(e) {
-    e.preventDefault();
-    if (!title || !date || !time) return;
+    // e.preventDefault();
+    // if (!title || !date || !time) return;
 
-    const newEvent = {
-      id: Date.now(),
-      title,
-      date,
-      time,
-      desc,
-    };
+    // const newEvent = {
+    //   id: Date.now(),
+    //   title,
+    //   date,
+    //   time,
+    //   desc,
+    // };
 
-    setEvents([...events, newEvent]);
-    setTitle("");
-    setDate("");
-    setTime("");
-    setDesc("");
+    // setEvents([...events, newEvent]);
+    // setTitle("");
+    // setDate("");
+    // setTime("");
+    // setDesc("");
   }
 
-  function deleteEvent(id) {
-    setEvents(events.filter((ev) => ev.id !== id));
-  }
+  // function deleteEvent(id) {
+  //   setEvents(events.filter((ev) => ev.id !== id));
+  // }
 
   return (
     <div className="page">
@@ -52,8 +53,9 @@ export default function ZooScheduler() {
 
         <label>Description</label>
         <input value={desc} onChange={(e) => setDesc(e.target.value)} />
-
+        <Link to= "/request">
         <button className="btn" type="submit" style={{ marginTop: "16px" }}>Add Event</button>
+        </Link>
       </form>
 
       {/* Event List */}
@@ -64,13 +66,13 @@ export default function ZooScheduler() {
             <p><strong>Date:</strong> {ev.date}</p>
             <p><strong>Time:</strong> {ev.time}</p>
             {ev.desc && <p>{ev.desc}</p>}
-            <button
+            {/* <button
               className="btn"
               style={{ marginTop: "12px", background: "#e57373", borderColor: "#cc5555" }}
               onClick={() => deleteEvent(ev.id)}
             >
               Delete
-            </button>
+            </button> */}
           </div>
         ))}
       </div>
