@@ -630,7 +630,7 @@ export default function App() {
         }
         />
          <Route 
-        path="/events" 
+        path="/visit" 
         element={
         <CEvents/>
         }
