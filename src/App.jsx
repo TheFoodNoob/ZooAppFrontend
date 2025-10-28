@@ -17,7 +17,6 @@ import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
 import Animals from "./pages/employee/Animals.jsx"
-import CAnimals from "./pages/customer/Animals.jsx"
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
@@ -27,6 +26,10 @@ import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
 
+import CAnimals from "./pages/customer/Animals.jsx"
+import CTickets from "./pages/customer/Tickets.jsx"
+import ExhibitsPage from "./pages/customer/Exhibit.jsx";
+import Events from "./pages/customer/Events.jsx";
 function Nav() {
   const { user, logout } = useAuth();
 
@@ -106,7 +109,7 @@ export default function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-
+        
         {/* Protected pages */} 
         <Route
           path="/dashboard"
@@ -165,7 +168,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+          
         {/* >>> Add this route BEFORE /events/:id <<< */}
         <Route
           path="/events/new"
