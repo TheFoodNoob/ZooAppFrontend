@@ -39,6 +39,7 @@ import CTickets from "./pages/customer/Tickets.jsx"
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
 import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
+import RequestReceived from "./pages/customer/RequestRecieved.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -581,17 +582,24 @@ export default function App() {
         <CAnimals />
         }
          />
-         
+
         <Route 
         path="/tickets" 
         element={
         <CTickets/>
       }
         />
+        
          <Route 
         path="/Exhibits" 
         element={
         <ExhibitsPage/>
+        }
+        />
+        <Route 
+        path="/request" 
+        element={
+        <RequestReceived/>
         }
         />
         <Route 
