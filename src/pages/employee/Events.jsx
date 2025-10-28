@@ -271,48 +271,27 @@ export default function Events() {
                     </tr>
                     </thead>
                     <tbody>
-                      {paged.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} style={{ textAlign: "center", color: "var(--muted)" }}>
-                            No events found. Try changing filters, or{" "}
-                            <Link to="/events/new">create your first event</Link>.
-                          </td>
+                    {paged.map((r) => (
+                        <tr key={r.event_id}>
+                        <td className="nowrap">{fmtDate(r.date)}</td>
+                        <td>{r.name}</td>
+                        <td className="nowrap">{fmtTime(r.start_time, r.end_time)}</td>
+                        <td>{r.location}</td>
+                        <td className="nowrap">{r.capacity}</td>
+                        <td className="nowrap">{fmtPriceCents(r.price_cents)}</td>
+                        <td className="nowrap">
+                            <button className="btn btn-sm" onClick={() => toggleActive(r)} title="Toggle active">
+                            {Number(r.is_active) ? "On" : "Off"}
+                            </button>
+                        </td>
+                        <td className="nowrap"><code>{r.event_id}</code></td>
+                        <td className="nowrap" style={{ whiteSpace: "nowrap" }}>
+                            <Link className="btn btn-sm" to={`/events/${r.event_id}`}>View</Link>
+                            <Link className="btn btn-sm" to={`/events/${r.event_id}/edit`}>Edit</Link>
+                            <button className="btn btn-sm" onClick={() => setToDelete(r)}>Delete</button>
+                        </td>
                         </tr>
-                      ) : (
-                        paged.map((r) => (
-                          <tr key={r.event_id}>
-                            <td className="nowrap">{fmtDate(r.date)}</td>
-                            <td>{r.name}</td>
-                            <td className="nowrap">{fmtTime(r.start_time, r.end_time)}</td>
-                            <td>{r.location}</td>
-                            <td className="nowrap">{r.capacity}</td>
-                            <td className="nowrap">{fmtPriceCents(r.price_cents)}</td>
-                            <td className="nowrap">
-                              <button
-                                className="btn btn-sm"
-                                onClick={() => toggleActive(r)}
-                                title="Toggle active"
-                              >
-                                {Number(r.is_active) ? "On" : "Off"}
-                              </button>
-                            </td>
-                            <td className="nowrap">
-                              <code>{r.event_id}</code>
-                            </td>
-                            <td className="nowrap" style={{ whiteSpace: "nowrap" }}>
-                              <Link className="btn btn-sm" to={`/events/${r.event_id}`}>
-                                View
-                              </Link>
-                              <Link className="btn btn-sm" to={`/events/${r.event_id}/edit`}>
-                                Edit
-                              </Link>
-                              <button className="btn btn-sm" onClick={() => setToDelete(r)}>
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                    ))}
                     </tbody>
                 </table>
               </div>
