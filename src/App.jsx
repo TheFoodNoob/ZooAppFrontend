@@ -26,24 +26,35 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
+// add:
+import RoleHub from "./pages/employee/RoleHub.jsx";
+import AdminDashboard from "./pages/employee/dash/AdminDashboard.jsx";
+import OpsManagerDashboard from "./pages/employee/dash/OpsManagerDashboard.jsx";
+import KeeperDashboard from "./pages/employee/dash/KeeperDashboard.jsx";
+import VetDashboard from "./pages/employee/dash/VetDashboard.jsx";
+import GateAgentDashboard from "./pages/employee/dash/GateAgentDashboard.jsx";
+import RetailDashboard from "./pages/employee/dash/RetailDashboard.jsx";
+import CoordinatorDashboard from "./pages/employee/dash/CoordinatorDashboard.jsx";
+import SecurityDashboard from "./pages/employee/dash/SecurityDashboard.jsx";
 
-/* ---------- RoleHub (redirect to role dashboard) ---------- */
-function RoleHub() {
-  const { user } = useAuth();
-  if (!user) return null;
-  const map = {
-    keeper: "/keeper",
-    vet: "/vet",
-    gate_agent: "/gate",
-    ops_manager: "/ops",
-    retail: "/retail",
-    coordinator: "/coord",
-    security: "/security",
-    admin: "/admin",
-  };
-  const dest = map[user.role] || "/dashboard";
-  return <Navigate to={dest} replace />;
-}
+
+// /* ---------- RoleHub (redirect to role dashboard) ---------- */
+// function RoleHub() {
+//   const { user } = useAuth();
+//   if (!user) return null;
+//   const map = {
+//     keeper: "/keeper",
+//     vet: "/vet",
+//     gate_agent: "/gate",
+//     ops_manager: "/ops",
+//     retail: "/retail",
+//     coordinator: "/coord",
+//     security: "/security",
+//     admin: "/admin",
+//   };
+//   const dest = map[user.role] || "/dashboard";
+//   return <Navigate to={dest} replace />;
+// }
 
 /* ---------- Shared page shell (use your existing page/card look) ---------- */
 function CardPage({ title, children }) {
@@ -694,6 +705,80 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin"]}>
               <AdminDash />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/role"
+          element={
+            <ProtectedRoute>
+              <RoleHub />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Role dashboards */}
+        <Route
+          path="/dash/admin"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/ops"
+          element={
+            <ProtectedRoute roles={["ops_manager","admin"]}>
+              <OpsManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/keeper"
+          element={
+            <ProtectedRoute roles={["keeper","admin","ops_manager"]}>
+              <KeeperDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/vet"
+          element={
+            <ProtectedRoute roles={["vet","admin","ops_manager"]}>
+              <VetDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/gate"
+          element={
+            <ProtectedRoute roles={["gate_agent","admin","ops_manager"]}>
+              <GateAgentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/retail"
+          element={
+            <ProtectedRoute roles={["retail","admin","ops_manager"]}>
+              <RetailDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/coordinator"
+          element={
+            <ProtectedRoute roles={["coordinator","admin","ops_manager"]}>
+              <CoordinatorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dash/security"
+          element={
+            <ProtectedRoute roles={["security","admin","ops_manager"]}>
+              <SecurityDashboard />
             </ProtectedRoute>
           }
         />

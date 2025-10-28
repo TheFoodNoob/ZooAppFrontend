@@ -1,16 +1,18 @@
+// src/components/ProtectedRoute.jsx
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children, roles }) {
-  const { loading, user } = useAuth();
+  const { token, user } = useAuth();
 
-  if (loading) return <div style={{ padding: 24 }}>Loading…</div>;
+  // not logged in → send to login
+  if (!token) return <Navigate to="/login" replace />;
 
-  if (!user) return <Navigate to="/login" replace />;
-
-  if (roles && roles.length && !roles.includes(user.role)) {
-    return <div style={{ padding: 24 }}>Forbidden (role: {user.role})</div>;
+  // role-restricted?
+  if (Array.isArray(roles) && roles.length > 0) {
+    const allowed = user && roles.includes(user.role);
+    if (!allowed) return <Navigate to="/403" replace />;
   }
 
   return children;
