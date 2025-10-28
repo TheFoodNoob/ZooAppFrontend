@@ -30,6 +30,7 @@ import CAnimals from "./pages/customer/Animals.jsx"
 import CTickets from "./pages/customer/Tickets.jsx"
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
 import CEvents from "./pages/customer/Events.jsx";
+import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -617,6 +618,7 @@ export default function App() {
         <CAnimals />
         }
          />
+         
         <Route 
         path="/tickets" 
         element={
@@ -629,7 +631,13 @@ export default function App() {
         <ExhibitsPage/>
         }
         />
-         <Route 
+        <Route 
+        path= "scheduleEvents"
+         element={
+        <ZooScheduler/>
+        }
+        />
+        <Route
         path="/visit" 
         element={
         <CEvents/>
