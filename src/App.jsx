@@ -25,12 +25,20 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
-
 import CAnimals from "./pages/customer/Animals.jsx"
 import CExhibits from "./pages/customer/Exhibit.jsx"
 import CEvents from "./pages/customer/Events.jsx"
 import Schedule from "./pages/customer/ZooScheduler.jsx"
 import Tickets from "./pages/customer/Tickets.jsx";
+
+function Forbidden() {
+  return (
+    <div className="page">
+      <h2>403 – Forbidden</h2>
+      <p>You don’t have permission to view this page.</p>
+    </div>
+  );
+}
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -52,11 +60,13 @@ function Nav() {
                 Employees
               </NavLink>
             </li>
-            <li>
-              <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")}>
-                Reports
-              </NavLink>
-            </li>
+            {user.role === "admin" && (
+              <li>
+                <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")}>
+                  Reports
+                </NavLink>
+              </li>
+            )}
 
             {(user.role === "admin" || user.role === "ops_manager") && (
               <li>
@@ -178,7 +188,7 @@ export default function App() {
         <Route
           path="/reports"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["admin"]}>
               <Reports />
             </ProtectedRoute>
           }
@@ -219,6 +229,13 @@ export default function App() {
               <EventEdit />
             </ProtectedRoute>
           }
+        />
+
+        <Route 
+          path="/403" 
+          element={
+          <Forbidden />
+          } 
         />
 
         {/* 404 */}

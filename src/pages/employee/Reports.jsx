@@ -377,6 +377,16 @@ export default function Reports() {
         <div>Loading…</div>
       ) : (
         <>
+        {employeesFiltered.length === 0 && (
+          <div style={{ color: "var(--muted)", marginBottom: 12 }}>
+            No employee data to display.
+          </div>
+        )}
+        {animalsFiltered.length === 0 && (
+          <div style={{ color: "var(--muted)", marginBottom: 12 }}>
+            No animal data to display.
+          </div>
+        )}
           {/* Top stats (payroll has cents tooltip for debugging) */}
           <div className="row" style={{ gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
             <StatCard label="Total Employees" value={employeesFiltered.length} />
