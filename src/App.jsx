@@ -33,12 +33,6 @@ import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 
-// NEW: role-specific base pages you added
-import Vet from "./pages/employee/Vet.jsx";
-import GateAgent from "./pages/employee/GateAgent.jsx";
-import Retail from "./pages/employee/Retail.jsx";
-import Coordinator from "./pages/employee/Coordinator.jsx";
-import Security from "./pages/employee/Security.jsx";
 
 import CAnimals from "./pages/customer/Animals.jsx"
 import CTickets from "./pages/customer/Tickets.jsx"
