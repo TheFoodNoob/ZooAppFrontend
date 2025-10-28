@@ -1,5 +1,6 @@
+// src/pages/customer/Tickets.jsx
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { api } from "../../api";
 
 export default function Tickets() {
   const ticketOptions = [
@@ -16,25 +17,26 @@ export default function Tickets() {
   });
   const [total, setTotal] = useState(20);
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // Update form fields
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const newForm = { ...formData, [name]: value };
+    const newForm = { ...formData, [name]: name === "quantity" ? Number(value) : value };
     setFormData(newForm);
 
     const selectedTicket = ticketOptions.find((t) => t.type === newForm.ticketType);
-    const newTotal = selectedTicket.price * newForm.quantity;
-    setTotal(newTotal);
+    setTotal(selectedTicket.price * (newForm.quantity || 1));
   };
 
-  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("Processing purchase...");
+    if (!formData.name || !formData.email || !formData.ticketType || !formData.quantity) {
+      setMessage("Please fill out all fields."); return;
+    }
+    setSubmitting(true); setMessage("Processing purchase…");
 
     try {
-      const res = await fetch("http://localhost:4000/api/tickets/purchase", {
+      const res = await fetch(`${api}/api/tickets/purchase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -45,15 +47,15 @@ export default function Tickets() {
           total,
         }),
       });
-
-      if (!res.ok) throw new Error("Purchase failed");
+      if (!res.ok) throw new Error(`Purchase failed (${res.status})`);
       const data = await res.json();
-
       setMessage(`✅ ${data.message || "Purchase successful!"}`);
       setFormData({ name: "", email: "", ticketType: "Adult", quantity: 1 });
       setTotal(20);
     } catch (error) {
       setMessage("❌ Error: Could not process purchase.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -61,64 +63,27 @@ export default function Tickets() {
     <div className="page">
       <h1>Buy Tickets</h1>
       <div className="panel">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="two-col" style={{ gap: 12 }}>
+          <label>Name<input name="name" value={formData.name} onChange={handleChange} required /></label>
+          <label>Email<input type="email" name="email" value={formData.email} onChange={handleChange} required /></label>
           <label>
-            Name:
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </label>
-
-          <label>
-            Email:
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </label>
-
-          <label>
-            Ticket Type:
-            <select
-              name="ticketType"
-              value={formData.ticketType}
-              onChange={handleChange}
-            >
+            Ticket Type
+            <select name="ticketType" value={formData.ticketType} onChange={handleChange}>
               {ticketOptions.map((t) => (
-                <option key={t.type} value={t.type}>
-                  {t.type} - ${t.price}
-                </option>
+                <option key={t.type} value={t.type}>{t.type} - ${t.price}</option>
               ))}
             </select>
           </label>
-
           <label>
-            Quantity:
-            <input
-              type="number"
-              name="quantity"
-              min="1"
-              value={formData.quantity}
-              onChange={handleChange}
-            />
+            Quantity
+            <input type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} />
           </label>
-
-          <h3>Total: ${total}</h3>
-          <Link to ="/request">   
-          <button className="btn" >
-            Submit Purchase
-          </button>
-          </Link>   
+          <div className="span-2"><h3>Total: ${total}</h3></div>
+          <div className="span-2">
+            <button className="btn" disabled={submitting}>{submitting ? "Submitting…" : "Submit Purchase"}</button>
+          </div>
         </form>
-
-        {message && <p>{message}</p>}
+        {message && <p style={{ marginTop: 10 }}>{message}</p>}
       </div>
     </div>
   );
