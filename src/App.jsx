@@ -37,7 +37,7 @@ import Security from "./pages/employee/Security.jsx";
 import CAnimals from "./pages/customer/Animals.jsx"
 import CTickets from "./pages/customer/Tickets.jsx"
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
-import CEvents from "./pages/customer/Events.jsx";
+import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
@@ -600,11 +600,11 @@ export default function App() {
         <ZooScheduler/>
         }
         />
-        <Route
+        <Route 
         path="/visit" 
         element={
-        <CEvents/>
-        }
+        <Visit />
+        } 
         />
         {/* Protected */}
         <Route

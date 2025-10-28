@@ -3,8 +3,9 @@ import React from "react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function ExhibitsPage() {
+export default function Exhibits() {
   const { token } = useAuth();
+  const [isPublic, setIsPublic] = React.useState(false);
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState("");
@@ -13,12 +14,29 @@ export default function ExhibitsPage() {
     (async () => {
       setLoading(true); setErr("");
       try {
-        // Using reports/animals-per-exhibit for public-friendly data
-        const res = await fetch(`${api}/api/reports/animals-per-exhibit`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
-        const data = await res.json();
+        let data;
+        if (!token) {
+          // Logged-out: go straight to public
+          const res = await fetch(`${api}/api/public/animals-per-exhibit`);
+          if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
+          data = await res.json();
+          setIsPublic(true);
+        } else {
+          // Logged-in: try protected first, then fall back
+          let res = await fetch(`${api}/api/reports/animals-per-exhibit`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.status === 401 || res.status === 403) {
+            res = await fetch(`${api}/api/public/animals-per-exhibit`);
+            if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
+            data = await res.json();
+            setIsPublic(true);
+          } else {
+            if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
+            data = await res.json();
+            setIsPublic(false);
+          }
+        }
         setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         setErr(e.message || "Failed to load exhibits");
@@ -28,27 +46,30 @@ export default function ExhibitsPage() {
     })();
   }, [token]);
 
-  return (
+ return (
     <div className="page">
       <h1>Zoo Exhibits</h1>
+
       <div className="panel">
         {loading && <div>Loading…</div>}
         {err && <div className="error">{err}</div>}
-        {!loading && !err && rows.length === 0 && <div>No exhibits to show.</div>}
+        {!loading && !err && rows.length === 0 && (
+          <div>No exhibits found.</div>
+        )}
 
         <div className="grid">
-          {rows.map((r, idx) => (
-            <div key={idx} className="card">
-              <h3>{r.exhibit || r.name || "Exhibit"}</h3>
-              <div style={{ opacity: 0.8 }}>
-                Animals: <strong>{r.animal_count ?? r.count ?? 0}</strong>
+          {rows.map((r, i) => (
+            <div key={i} className="card">
+              <h3 style={{ marginBottom: 4 }}>{r.exhibit || "Exhibit"}</h3>
+              <div style={{ opacity: 0.8, fontSize: 14 }}>
+                Animals: <strong>{r.animal_count ?? 0}</strong>
               </div>
             </div>
           ))}
         </div>
 
-        {!token && (
-          <div className="note" style={{ marginTop: 12 }}>
+        {isPublic && (
+          <div className="note">
             Public mode: showing counts only. Log in for details.
           </div>
         )}
