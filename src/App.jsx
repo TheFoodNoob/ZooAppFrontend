@@ -612,13 +612,8 @@ export default function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-<<<<<<< HEAD
-        
-        {/* Protected pages */} 
-=======
 
         {/* Protected */}
->>>>>>> f6a20d783d3fd72cf140187e1d0705f31a647841
         <Route
           path="/dashboard"
           element={
@@ -754,11 +749,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-<<<<<<< HEAD
-          
-        {/* >>> Add this route BEFORE /events/:id <<< */}
-=======
->>>>>>> f6a20d783d3fd72cf140187e1d0705f31a647841
         <Route
           path="/events/new"
           element={
