@@ -16,8 +16,7 @@ import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
-import Animals from "./pages/employee/Animals.jsx";
-import CAnimals from "./pages/customer/Animals.jsx";
+import Animals from "./pages/employee/Animals.jsx"
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
@@ -34,6 +33,18 @@ import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 
+// NEW: role-specific base pages you added
+import Vet from "./pages/employee/Vet.jsx";
+import GateAgent from "./pages/employee/GateAgent.jsx";
+import Retail from "./pages/employee/Retail.jsx";
+import Coordinator from "./pages/employee/Coordinator.jsx";
+import Security from "./pages/employee/Security.jsx";
+
+import CAnimals from "./pages/customer/Animals.jsx"
+import CTickets from "./pages/customer/Tickets.jsx"
+import ExhibitsPage from "./pages/customer/Exhibit.jsx";
+import CEvents from "./pages/customer/Events.jsx";
+import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -566,12 +577,41 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
-        <Route path="/animals" element={<CAnimals />} />
+
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-
+        <Route 
+        path="/animals" element={
+        <CAnimals />
+        }
+         />
+         
+        <Route 
+        path="/tickets" 
+        element={
+        <CTickets/>
+      }
+        />
+         <Route 
+        path="/Exhibits" 
+        element={
+        <ExhibitsPage/>
+        }
+        />
+        <Route 
+        path= "scheduleEvents"
+         element={
+        <ZooScheduler/>
+        }
+        />
+        <Route
+        path="/visit" 
+        element={
+        <CEvents/>
+        }
+        />
         {/* Protected */}
         <Route
           path="/dashboard"
