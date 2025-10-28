@@ -8,14 +8,16 @@ export default function Visit() {
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState("");
   const [isPublic, setIsPublic] = React.useState(false);
-  const title = ev.title || ev.event_title || "Untitled Event";
-  const start = ev.start_time ? new Date(ev.start_time).toLocaleString() : "—";
-  const end   = ev.end_time   ? new Date(ev.end_time).toLocaleString()   : "—";
+
 
 
   const fmtDate = (s) => {
-    try { return new Date(s).toLocaleString(); } catch { return s || ""; }
+    if (!s) return "—";
+    if (typeof s === "string" && s.includes(" ")) s = s.replace(" ", "T");
+    const d = new Date(s);
+    return isNaN(d) ? "—" : d.toLocaleString();
   };
+
   const fmtTime = (s) => {
     try { return new Date(s).toLocaleTimeString(); } catch { return s || ""; }
   };
