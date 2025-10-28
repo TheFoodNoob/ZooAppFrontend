@@ -22,7 +22,7 @@ export default function Home() {
           <i className="fas fa-users"></i>
           <div>Team</div>
         </a>
-        <a href="/tickets" className="hero-card">
+        <a href="/BuyTickets" className="hero-card">
           <i className="fas fa-ticket-alt"></i>
           <div>Buy Tickets</div>
         </a>
