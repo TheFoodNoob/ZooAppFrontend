@@ -16,12 +16,7 @@ import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
-<<<<<<< HEAD
 import Animals from "./pages/employee/Animals.jsx"
-=======
-import Animals from "./pages/employee/Animals.jsx";
-import CAnimals from "./pages/customer/Animals.jsx";
->>>>>>> f6a20d783d3fd72cf140187e1d0705f31a647841
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
