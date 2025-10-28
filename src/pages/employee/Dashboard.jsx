@@ -13,20 +13,28 @@ export default function Dashboard() {
       <div className="grid">
         <div className="panel">
           <h3>Quick Actions</h3>
-          <ul>
-            <li>
-              <Link to="/employees" className="">view employees</Link>
-            </li>
-            <li> 
-              <Link to="/reports" className="">run reports</Link>
+          {user.role === "admin" && (
+            <ul>
+              <li>
+                <Link to="/employees" className="">view employees</Link>
               </li>
-            <li> 
-              <Link to="/events" className="">manage events</Link>
-            </li>
-            <li> 
-              <Link to="/animalStats" className="">search animals</Link>
-            </li>
-          </ul>
+              <li> 
+                <Link to="/reports" className="">run reports</Link>
+                </li>
+              <li> 
+                <Link to="/events" className="">manage events</Link>
+              </li>
+              <li> 
+                <Link to="/animalStats" className="">search animals</Link>
+              </li>
+            </ul>
+          )}
+          {user.role === "keeper" && (
+            <ul>
+              <li><Link to="/keeper">my tasks</Link></li>
+              <li><Link to="/animals">animal directory</Link></li>
+            </ul>
+          )}
         </div>
         <div className="panel">
           <h3>System Status</h3>
