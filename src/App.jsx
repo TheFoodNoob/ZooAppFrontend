@@ -47,13 +47,11 @@ function Nav() {
                 Employees
               </NavLink>
             </li>
-            {user.role === "admin" && (
-              <li>
-                <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Reports
-                </NavLink>
-              </li>
-            )}
+            <li>
+              <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")}>
+                Reports
+              </NavLink>
+            </li>
 
             {(user.role === "admin" || user.role === "ops_manager") && (
               <li>
@@ -152,7 +150,7 @@ export default function App() {
         <Route
           path="/reports"
           element={
-            <ProtectedRoute roles={["admin"]}>
+            <ProtectedRoute>
               <Reports />
             </ProtectedRoute>
           }
@@ -193,13 +191,6 @@ export default function App() {
               <EventEdit />
             </ProtectedRoute>
           }
-        />
-
-        <Route 
-          path="/403" 
-          element={
-          <Forbidden />
-          } 
         />
 
         {/* 404 */}
