@@ -55,6 +55,7 @@ export default function ZooScheduler() {
         <input value={desc} onChange={(e) => setDesc(e.target.value)} />
         <Link to= "/request">
         <button className="btn" type="submit" style={{ marginTop: "16px" }}>Add Event</button>
+        {/*calls to api if everything checks out*/}
         </Link>
       </form>
 

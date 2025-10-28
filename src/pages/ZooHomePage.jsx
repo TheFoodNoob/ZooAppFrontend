@@ -29,10 +29,10 @@ export default function Home() {
         {/* Example content */}
         <div className="grid">
           <div className=" ">
-            <img src="../../public/img/lion.webp" alt="Lion" />
+            <img src="/img/lion.webp" alt="Lion" />
           </div>
           <div className=" ">
-            <img src="../../public/img/seal.webp" alt="Seal" />
+            <img src="/img/seal.webp" alt="Seal" />
           </div>
         </div>
 

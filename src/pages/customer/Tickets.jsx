@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function Tickets() {
   const ticketOptions = [
@@ -110,10 +111,11 @@ export default function Tickets() {
           </label>
 
           <h3>Total: ${total}</h3>
-
+          <Link to ="/request">   
           <button className="btn" >
             Submit Purchase
           </button>
+          </Link>   
         </form>
 
         {message && <p>{message}</p>}
