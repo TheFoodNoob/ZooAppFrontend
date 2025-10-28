@@ -1,19 +1,19 @@
 // src/pages/Animals.jsx
 import React from "react";
-import sealImg from "../../img/seal.jpg"
-import tigerImg from "../../img/tiger.webp"
+// import sealImg from "../../img/seal.jpg"
+// import tigerImg from "../../img/tiger.webp"
 
 //TODO::Need To pull these via API
 const seal = {
   name: "Sally",
   species: "Harbor Seal",
-  image: sealImg, 
+  image: "", 
   description: "Sally is very friendly. She loves to play and eat fish!",
 };
 const tiger = {
   name: "Granger",
   species: "White Saber Tooth Tiger",
-  image: tigerImg,
+  image: "",
   description: "Granger wouldnt let a fly touch his food. He's very territorial but I hear he loves to tell secrets.",
 };
 

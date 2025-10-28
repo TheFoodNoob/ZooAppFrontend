@@ -29,7 +29,7 @@ import EventEdit from "./pages/employee/EventEdit.jsx";
 import CAnimals from "./pages/customer/Animals.jsx"
 import CTickets from "./pages/customer/Tickets.jsx"
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
-import Events from "./pages/customer/Events.jsx";
+import CEvents from "./pages/customer/Events.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -607,12 +607,34 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
-        <Route path="/animals" element={<CAnimals />} />
+
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-
+        <Route 
+        path="/animals" element={
+        <CAnimals />
+        }
+         />
+        <Route 
+        path="/tickets" 
+        element={
+        <CTickets/>
+      }
+        />
+         <Route 
+        path="/Exhibits" 
+        element={
+        <ExhibitsPage/>
+        }
+        />
+         <Route 
+        path="/events" 
+        element={
+        <CEvents/>
+        }
+        />
         {/* Protected */}
         <Route
           path="/dashboard"
