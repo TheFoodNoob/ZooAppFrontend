@@ -10,7 +10,7 @@ export default function ExhibitsPage() {
         "Experience the vast savannas where our tiger roams freely. Learn how these animals adapt to life on the open plains.",
       animals: ["Saber Tooth Tiger"],
       image:
-        "/public/img/tiger.jpg",
+        "/img/tiger.jpg",
     },
     {
       id: 2,
@@ -19,7 +19,7 @@ export default function ExhibitsPage() {
         "Meet our playful seals as they swim, dive, and splash! Discover their unique adaptations to marine life.",
       animals: ["Harbor Seal"],
       image:
-        "/public/img/seal.webp",
+        "/img/seal.webp",
     },
   ];
 

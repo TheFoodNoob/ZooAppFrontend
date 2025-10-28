@@ -7,13 +7,13 @@ import React from "react";
 const seal = {
   name: "Sandy",
   species: "Harbor Seal",
-  image: "/public/img/harborSeal.webp", 
+  image: "/img/harborSeal.webp", 
   description: "Sally is very friendly. She loves to play and eat fish!",
 };
 const tiger = {
   name: "Granger",
   species: "White Saber Tooth Tiger",
-  image: "/public/img/tiger.jpg",
+  image: "/img/tiger.jpg",
   description: "Granger wouldnt let a fly touch his food. He's very territorial but I hear he loves to tell secrets.",
 };
 
