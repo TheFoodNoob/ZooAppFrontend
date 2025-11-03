@@ -40,6 +40,7 @@ import ExhibitsPage from "./pages/customer/Exhibit.jsx";
 import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 import RequestReceived from "./pages/customer/RequestRecieved.jsx";
+import EventDetails from "./pages/customer/EventDetails.jsx";
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -612,6 +613,12 @@ export default function App() {
         path="/visit" 
         element={
         <Visit />
+        } 
+        />
+        <Route 
+        path="/visit/:id" 
+        element={
+        <EventDetails />
         } 
         />
         {/* Protected */}

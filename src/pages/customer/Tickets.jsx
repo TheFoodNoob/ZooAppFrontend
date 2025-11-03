@@ -1,89 +1,151 @@
-// src/pages/customer/Tickets.jsx
-import React, { useState } from "react";
+import React from "react";
 import { api } from "../../api";
 
-export default function Tickets() {
-  const ticketOptions = [
-    { type: "Adult", price: 20 },
-    { type: "Child", price: 10 },
-    { type: "Senior", price: 15 },
-  ];
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    ticketType: "Adult",
-    quantity: 1,
+// $ cents → "$0.00"
+const fmtUSD = (cents) =>
+  (Number(cents || 0) / 100).toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
   });
-  const [total, setTotal] = useState(20);
-  const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const newForm = { ...formData, [name]: name === "quantity" ? Number(value) : value };
-    setFormData(newForm);
+export default function Tickets() {
+  const [types, setTypes] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState("");
+  const [qty, setQty] = React.useState({}); // { [ticket_type_id]: number }
 
-    const selectedTicket = ticketOptions.find((t) => t.type === newForm.ticketType);
-    setTotal(selectedTicket.price * (newForm.quantity || 1));
-  };
+  React.useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setErr("");
+      try {
+        const res = await fetch(`${api}/api/public/ticket-types`);
+        if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+        const data = await res.json();
+        setTypes(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setErr(e.message || "Failed to load ticket types");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email || !formData.ticketType || !formData.quantity) {
-      setMessage("Please fill out all fields."); return;
-    }
-    setSubmitting(true); setMessage("Processing purchase…");
+  const setCount = (id, n) =>
+    setQty((p) => ({ ...p, [id]: Math.max(0, Math.min(99, Number(n) || 0)) }));
 
-    try {
-      const res = await fetch(`${api}/api/tickets/purchase`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          ticketType: formData.ticketType,
-          quantity: Number(formData.quantity),
-          total,
-        }),
-      });
-      if (!res.ok) throw new Error(`Purchase failed (${res.status})`);
-      const data = await res.json();
-      setMessage(`✅ ${data.message || "Purchase successful!"}`);
-      setFormData({ name: "", email: "", ticketType: "Adult", quantity: 1 });
-      setTotal(20);
-    } catch (error) {
-      setMessage("❌ Error: Could not process purchase.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const inc = (id) => setCount(id, (qty[id] || 0) + 1);
+  const dec = (id) => setCount(id, (qty[id] || 0) - 1);
+  const clearAll = () => setQty({});
+
+  const items = types.map((t) => ({
+    id: t.ticket_type_id ?? t.id,
+    name: t.name,
+    price_cents: t.price_cents,
+    description: t.description || "",
+    active: t.is_active !== 0,
+  }));
+
+  const totalCents = items.reduce(
+    (sum, it) => sum + (qty[it.id] || 0) * Number(it.price_cents || 0),
+    0
+  );
+  const totalQty = Object.values(qty).reduce((a, b) => a + (Number(b) || 0), 0);
 
   return (
-    <div className="page">
-      <h1>Buy Tickets</h1>
-      <div className="panel">
-        <form onSubmit={handleSubmit} className="two-col" style={{ gap: 12 }}>
-          <label>Name<input name="name" value={formData.name} onChange={handleChange} required /></label>
-          <label>Email<input type="email" name="email" value={formData.email} onChange={handleChange} required /></label>
-          <label>
-            Ticket Type
-            <select name="ticketType" value={formData.ticketType} onChange={handleChange}>
-              {ticketOptions.map((t) => (
-                <option key={t.type} value={t.type}>{t.type} - ${t.price}</option>
+    <div className="page tickets-page">
+      <h1>Tickets</h1>
+
+      <div className="panel tickets-panel">
+        {loading && <div className="muted">Loading…</div>}
+        {err && <div className="error">{err}</div>}
+
+        {!loading && !err && items.length === 0 && (
+          <div className="callout">No ticket types found.</div>
+        )}
+
+        {!loading && !err && items.length > 0 && (
+          <>
+            <div className="tickets-grid">
+              {items.map((it) => (
+                <article key={it.id} className="ticket-card">
+                  <header className="ticket-head">
+                    <h3 className="ticket-title">{it.name || "Admission"}</h3>
+                    <div className="ticket-price">{fmtUSD(it.price_cents)}</div>
+                  </header>
+
+                  {it.description && (
+                    <p className="ticket-desc">{it.description}</p>
+                  )}
+
+                  <div className="qty-row" aria-label={`Quantity for ${it.name}`}>
+                    <button
+                      className="btn btn-ghost qty-btn"
+                      type="button"
+                      onClick={() => dec(it.id)}
+                      aria-label={`Decrease ${it.name} quantity`}
+                    >
+                      –
+                    </button>
+
+                    <input
+                      className="qty-input"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      aria-label={`${it.name} quantity`}
+                      value={qty[it.id] ?? 0}
+                      onChange={(e) => setCount(it.id, e.target.value)}
+                    />
+
+                    <button
+                      className="btn btn-ghost qty-btn"
+                      type="button"
+                      onClick={() => inc(it.id)}
+                      aria-label={`Increase ${it.name} quantity`}
+                    >
+                      +
+                    </button>
+                  </div>
+                </article>
               ))}
-            </select>
-          </label>
-          <label>
-            Quantity
-            <input type="number" min="1" name="quantity" value={formData.quantity} onChange={handleChange} />
-          </label>
-          <div className="span-2"><h3>Total: ${total}</h3></div>
-          <div className="span-2">
-            <button className="btn" disabled={submitting}>{submitting ? "Submitting…" : "Submit Purchase"}</button>
-          </div>
-        </form>
-        {message && <p style={{ marginTop: 10 }}>{message}</p>}
+            </div>
+
+            <aside className="ticket-summary">
+              <div className="summary-row">
+                <span className="summary-label">Items</span>
+                <span className="summary-val">{totalQty}</span>
+              </div>
+              <div className="summary-row">
+                <span className="summary-label">Total</span>
+                <span className="summary-val total">{fmtUSD(totalCents)}</span>
+              </div>
+              <div className="summary-actions">
+                <button className="btn btn-ghost" onClick={clearAll} type="button">
+                  Clear
+                </button>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={totalCents <= 0}
+                  onClick={() =>
+                    alert(
+                      `Demo only 🐾\n\nCart: ${JSON.stringify(qty)}\nTotal: ${fmtUSD(
+                        totalCents
+                      )}`
+                    )
+                  }
+                >
+                  Proceed
+                </button>
+              </div>
+              <div className="muted sm">
+                Public demo: cart/checkout are disabled. Staff tools are available
+                after login.
+              </div>
+            </aside>
+          </>
+        )}
       </div>
     </div>
   );

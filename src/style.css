@@ -171,3 +171,187 @@ textarea { resize: vertical; min-height: 40px; }
   .table-wrap { max-height: none; }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+@keyframes shimmer { 
+  0% { background-position: 100% 0; } 
+  100% { background-position: 0 0; } 
+}
+
+/* --------- Base (keep your current styles, add/adjust below) --------- */
+
+:root{
+  --bg: #fffdf6;
+  --panel: #fbf1c7;
+  --card: #fff8e1;
+  --ink: #1e1e1e;
+  --muted: #58606b;
+  --brand: #2d8a34;     /* green */
+  --brand-2: #af2e2e;   /* red */
+  --ring: rgba(0,0,0,.06);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.08);
+  --shadow-md: 0 10px 24px rgba(0,0,0,.14);
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body{
+  margin:0;
+  color: var(--ink);
+  background: var(--bg);
+  font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.page { max-width: 1100px; margin: 0 auto; padding: 28px 18px 60px; }
+.page > h1 { margin: 8px 0 18px; font-size: 28px; }
+
+.panel{
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+}
+
+/* Alerts / helpers */
+.error{
+  background: #fde8e8;
+  border: 1px solid #f7b3b3;
+  color: #7f1d1d;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.callout{
+  background: #fff8e1;
+  border: 1px solid #eadfb2;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+.muted{ color: var(--muted); }
+.muted.sm{ font-size: 12px; }
+
+/* Buttons */
+.btn{
+  appearance: none;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+}
+.btn:hover{ box-shadow: var(--shadow-sm); }
+.btn:active{ transform: translateY(1px); }
+
+.btn-primary{
+  background: var(--brand);
+  color: #fff;
+  border-color: transparent;
+}
+.btn-primary:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+}
+.btn-ghost{
+  background: transparent;
+  border-color: rgba(0,0,0,.15);
+}
+
+/* --------- Tickets page --------- */
+
+.tickets-panel{ padding: 18px; }
+
+.tickets-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.ticket-card{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 170px;
+  transition: box-shadow .15s ease, transform .06s ease;
+}
+.ticket-card:hover{
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.ticket-head{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.ticket-title{ margin: 0; font-size: 18px; }
+.ticket-price{ font-weight: 700; }
+
+.ticket-desc{
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* quantity control */
+.qty-row{
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qty-btn{
+  width: 36px;
+  height: 36px;
+  line-height: 1;
+  font-size: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.qty-input{
+  width: 64px;
+  height: 36px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 16px;
+  background: #fff;
+}
+
+/* Summary (sticky card) */
+.ticket-summary{
+  position: sticky;
+  bottom: 12px;
+  margin-top: 6px;
+  padding: 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+.summary-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.summary-label{ color: var(--muted); }
+.summary-val.total{ font-weight: 800; }
+
+.summary-actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Small screens polish */
+@media (max-width: 540px){
+  .ticket-head{ flex-direction: column; align-items: flex-start; gap: 2px; }
+  .qty-input{ width: 56px; }
+}
