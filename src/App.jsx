@@ -11,31 +11,13 @@ import { api } from "./api";
 import { useAuth } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-// NEW: universal cart widget in the nav
+// Universal cart widget (badge + dropdown)
 import CartWidget from "./components/CartWidget.jsx";
 
+// Public
 import Home from "./pages/ZooHomePage.jsx";
 import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx";
-
-import Dashboard from "./pages/employee/Dashboard.jsx";
-import Animals from "./pages/employee/Animals.jsx";
-import Employees from "./pages/employee/Employees.jsx";
-import Reports from "./pages/employee/Reports.jsx";
-import EmployeeView from "./pages/employee/EmployeeView.jsx";
-import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
-
-import Events from "./pages/employee/Events.jsx";
-import EventView from "./pages/employee/EventView.jsx";
-import EventEdit from "./pages/employee/EventEdit.jsx";
-
-// NEW: role-specific base pages you added
-import Vet from "./pages/employee/Vet.jsx";
-import GateAgent from "./pages/employee/GateAgent.jsx";
-import Retail from "./pages/employee/Retail.jsx";
-import Coordinator from "./pages/employee/Coordinator.jsx";
-import Security from "./pages/employee/Security.jsx";
-
 import CAnimals from "./pages/customer/Animals.jsx";
 import CTickets from "./pages/customer/Tickets.jsx";
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
@@ -43,6 +25,24 @@ import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 import RequestReceived from "./pages/customer/RequestRecieved.jsx";
 import EventDetails from "./pages/customer/EventDetails.jsx";
+
+// Employee/Admin
+import Dashboard from "./pages/employee/Dashboard.jsx";
+import Animals from "./pages/employee/Animals.jsx";
+import Employees from "./pages/employee/Employees.jsx";
+import Reports from "./pages/employee/Reports.jsx";
+import EmployeeView from "./pages/employee/EmployeeView.jsx";
+import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
+import Events from "./pages/employee/Events.jsx";
+import EventView from "./pages/employee/EventView.jsx";
+import EventEdit from "./pages/employee/EventEdit.jsx";
+
+// Role landing pages
+import Vet from "./pages/employee/Vet.jsx";
+import GateAgent from "./pages/employee/GateAgent.jsx";
+import Retail from "./pages/employee/Retail.jsx";
+import Coordinator from "./pages/employee/Coordinator.jsx";
+import Security from "./pages/employee/Security.jsx";
 
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
@@ -62,10 +62,10 @@ function RoleHub() {
   return <Navigate to={dest} replace />;
 }
 
-/* ---------- Shared page shell (use your existing page/card look) ---------- */
+/* ---------- Shared page shell ---------- */
 function CardPage({ title, children }) {
   return (
-    <div className="page" style={{ padding: "24px 16px" }}>
+    <div className="page" style={{ padding: "24px 0" }}>
       <div className="container" style={{ maxWidth: 1120, margin: "0 auto" }}>
         <h2 style={{ margin: "0 0 12px 0" }}>{title}</h2>
         <div
@@ -73,7 +73,7 @@ function CardPage({ title, children }) {
           style={{
             padding: 20,
             background: "#fff8e1",
-            borderRadius: 12,
+            borderRadius: 16,
             boxShadow:
               "0 2px 6px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.06)",
           }}
@@ -137,7 +137,6 @@ function KeeperDash() {
     }
   }
 
-  // true toggle + optimistic update
   async function toggleDone(t) {
     const nextVal = Number(t.is_complete) ? 0 : 1;
     setTasks((prev) =>
@@ -178,7 +177,6 @@ function KeeperDash() {
 
   return (
     <CardPage title="Keeper Dashboard">
-      {/* Toolbar that fits the card width (no inner scrollbars) */}
       <div
         style={{
           display: "flex",
@@ -196,11 +194,11 @@ function KeeperDash() {
             className="btn btn-sm"
             onClick={() => onSetFilter(k)}
             style={{
-              padding: "6px 10px",
+              padding: "8px 12px",
               borderRadius: 999,
               border: "1px solid #ddd",
               background: filter === k ? "#ffe08a" : "#fff",
-              fontWeight: filter === k ? 600 : 400,
+              fontWeight: filter === k ? 700 : 500,
               fontSize: 12,
             }}
           >
@@ -217,8 +215,8 @@ function KeeperDash() {
           className="error"
           style={{
             marginBottom: 10,
-            padding: "8px 10px",
-            borderRadius: 8,
+            padding: "10px 12px",
+            borderRadius: 10,
             background: "#ffe5e5",
           }}
         >
@@ -233,7 +231,6 @@ function KeeperDash() {
           No tasks yet. Ask your coordinator to assign one.
         </div>
       ) : (
-        // Scroll *inside* the card when long; keep header visible
         <div style={{ maxHeight: 420, overflowY: "auto", borderRadius: 10 }}>
           <table
             className="table"
@@ -255,13 +252,13 @@ function KeeperDash() {
                   zIndex: 1,
                 }}
               >
-                <th style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                   Date
                 </th>
-                <th style={{ padding: "10px 12px" }}>Animal</th>
-                <th style={{ padding: "10px 12px" }}>Task</th>
-                <th style={{ padding: "10px 12px" }}>Notes</th>
-                <th style={{ padding: "10px 12px" }}>Done</th>
+                <th style={{ padding: "12px 14px" }}>Animal</th>
+                <th style={{ padding: "12px 14px" }}>Task</th>
+                <th style={{ padding: "12px 14px" }}>Notes</th>
+                <th style={{ padding: "12px 14px" }}>Done</th>
               </tr>
             </thead>
             <tbody>
@@ -330,7 +327,7 @@ function KeeperDash() {
   );
 }
 
-/* ---------- Ops Manager (unchanged) ---------- */
+/* ---------- Ops Manager ---------- */
 function OpsManagerDash() {
   const { token } = useAuth();
   const [keepers, setKeepers] = React.useState([]);
@@ -453,9 +450,7 @@ function OpsManagerDash() {
           <label>Notes</label>
           <input
             value={form.notes}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, notes: e.target.value }))
-            }
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           />
         </div>
         <div className="span-2">
@@ -478,104 +473,126 @@ function Forbidden() {
   );
 }
 
-/* ---------- Top Nav (UPDATED: adds Tickets/Visit links for public, and CartWidget on right) ---------- */
+/* ---------- Top Nav (container + grouped links + anchored cart) ---------- */
 function Nav() {
   const { user, logout } = useAuth();
 
   return (
     <header className="topbar">
-      <nav className="nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div className="brand">H-Town Zoo</div>
+      <div className="container nav">
+        <div className="nav-inner">
+          <div className="brand">H-Town Zoo</div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {user ? (
+          <div className="nav-right">
             <ul className="links">
-              <li>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  Dashboard
-                </NavLink>
-              </li>
-              {(user.role === "admin" || user.role === "ops_manager") && (
-                <li>
-                  <NavLink
-                    to="/employees"
-                    className={({ isActive }) => (isActive ? "active" : "")}
-                  >
-                    Employees
-                  </NavLink>
-                </li>
+              {user ? (
+                <>
+                  <li>
+                    <NavLink
+                      to="/dashboard"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      Dashboard
+                    </NavLink>
+                  </li>
+                  {(user.role === "admin" || user.role === "ops_manager") && (
+                    <li>
+                      <NavLink
+                        to="/employees"
+                        className={({ isActive }) => (isActive ? "active" : "")}
+                      >
+                        Employees
+                      </NavLink>
+                    </li>
+                  )}
+                  {user.role === "admin" && (
+                    <li>
+                      <NavLink
+                        to="/reports"
+                        className={({ isActive }) => (isActive ? "active" : "")}
+                      >
+                        Reports
+                      </NavLink>
+                    </li>
+                  )}
+                  {(user.role === "admin" || user.role === "ops_manager") && (
+                    <li>
+                      <NavLink
+                        to="/events"
+                        className={({ isActive }) => (isActive ? "active" : "")}
+                      >
+                        Events
+                      </NavLink>
+                    </li>
+                  )}
+                  <li>
+                    <NavLink
+                      to="/role"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      My Role
+                    </NavLink>
+                  </li>
+                  <li>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={logout}
+                      type="button"
+                    >
+                      Logout
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <NavLink
+                      to="/"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      Home
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/visit"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      Visit
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/tickets"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      Tickets
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/login"
+                      className={({ isActive }) => (isActive ? "active" : "")}
+                    >
+                      Login
+                    </NavLink>
+                  </li>
+                </>
               )}
-              {user.role === "admin" && (
-                <li>
-                  <NavLink
-                    to="/reports"
-                    className={({ isActive }) => (isActive ? "active" : "")}
-                  >
-                    Reports
-                  </NavLink>
-                </li>
-              )}
-              {(user.role === "admin" || user.role === "ops_manager") && (
-                <li>
-                  <NavLink
-                    to="/events"
-                    className={({ isActive }) => (isActive ? "active" : "")}
-                  >
-                    Events
-                  </NavLink>
-                </li>
-              )}
-              <li>
-                <NavLink
-                  to="/role"
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  My Role
-                </NavLink>
-              </li>
-              <li>
-                <button className="btn" onClick={logout}>
-                  Logout
-                </button>
-              </li>
             </ul>
-          ) : (
-            <ul className="links">
-              <li>
-                <NavLink to="/" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Home
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/visit" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Visit
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/tickets" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Tickets
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/login" className={({ isActive }) => (isActive ? "active" : "")}>
-                  Login
-                </NavLink>
-              </li>
-            </ul>
-          )}
 
-          {/* Universal Cart (badge hidden when empty) */}
-          <CartWidget />
+            {/* Cart is anchored to this box so the dropdown never runs off-screen */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <CartWidget />
+            </div>
+          </div>
         </div>
-      </nav>
+      </div>
     </header>
   );
 }
 
-/* ---------- App Routes (updated to use your new role pages) ---------- */
+/* ---------- App Routes ---------- */
 export default function App() {
   const { user } = useAuth();
 
@@ -585,7 +602,6 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
-
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
