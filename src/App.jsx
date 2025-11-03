@@ -11,12 +11,15 @@ import { api } from "./api";
 import { useAuth } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
+// NEW: universal cart widget in the nav
+import CartWidget from "./components/CartWidget.jsx";
+
 import Home from "./pages/ZooHomePage.jsx";
 import Login from "./pages/Login.jsx";
 import Lost from "./pages/Lost.jsx";
 
 import Dashboard from "./pages/employee/Dashboard.jsx";
-import Animals from "./pages/employee/Animals.jsx"
+import Animals from "./pages/employee/Animals.jsx";
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
@@ -33,14 +36,14 @@ import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 
-
-import CAnimals from "./pages/customer/Animals.jsx"
-import CTickets from "./pages/customer/Tickets.jsx"
+import CAnimals from "./pages/customer/Animals.jsx";
+import CTickets from "./pages/customer/Tickets.jsx";
 import ExhibitsPage from "./pages/customer/Exhibit.jsx";
 import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 import RequestReceived from "./pages/customer/RequestRecieved.jsx";
 import EventDetails from "./pages/customer/EventDetails.jsx";
+
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user } = useAuth();
@@ -475,89 +478,98 @@ function Forbidden() {
   );
 }
 
-/* ---------- Top Nav (unchanged) ---------- */
+/* ---------- Top Nav (UPDATED: adds Tickets/Visit links for public, and CartWidget on right) ---------- */
 function Nav() {
   const { user, logout } = useAuth();
 
   return (
     <header className="topbar">
-      <nav className="nav">
+      <nav className="nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div className="brand">H-Town Zoo</div>
 
-        {user ? (
-          <ul className="links">
-            <li>
-              <NavLink
-                to="/dashboard"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                Dashboard
-              </NavLink>
-            </li>
-            {(user.role === "admin" || user.role === "ops_manager") && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {user ? (
+            <ul className="links">
               <li>
                 <NavLink
-                  to="/employees"
+                  to="/dashboard"
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
-                  Employees
+                  Dashboard
                 </NavLink>
               </li>
-            )}
-            {user.role === "admin" && (
+              {(user.role === "admin" || user.role === "ops_manager") && (
+                <li>
+                  <NavLink
+                    to="/employees"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Employees
+                  </NavLink>
+                </li>
+              )}
+              {user.role === "admin" && (
+                <li>
+                  <NavLink
+                    to="/reports"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Reports
+                  </NavLink>
+                </li>
+              )}
+              {(user.role === "admin" || user.role === "ops_manager") && (
+                <li>
+                  <NavLink
+                    to="/events"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Events
+                  </NavLink>
+                </li>
+              )}
               <li>
                 <NavLink
-                  to="/reports"
+                  to="/role"
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
-                  Reports
+                  My Role
                 </NavLink>
               </li>
-            )}
-            {(user.role === "admin" || user.role === "ops_manager") && (
               <li>
-                <NavLink
-                  to="/events"
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  Events
+                <button className="btn" onClick={logout}>
+                  Logout
+                </button>
+              </li>
+            </ul>
+          ) : (
+            <ul className="links">
+              <li>
+                <NavLink to="/" className={({ isActive }) => (isActive ? "active" : "")}>
+                  Home
                 </NavLink>
               </li>
-            )}
-            <li>
-              <NavLink
-                to="/role"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                My Role
-              </NavLink>
-            </li>
-            <li>
-              <button className="btn" onClick={logout}>
-                Logout
-              </button>
-            </li>
-          </ul>
-        ) : (
-          <ul className="links">
-            <li>
-              <NavLink
-                to="/"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                Home
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/login"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                Login
-              </NavLink>
-            </li>
-          </ul>
-        )}
+              <li>
+                <NavLink to="/visit" className={({ isActive }) => (isActive ? "active" : "")}>
+                  Visit
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/tickets" className={({ isActive }) => (isActive ? "active" : "")}>
+                  Tickets
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/login" className={({ isActive }) => (isActive ? "active" : "")}>
+                  Login
+                </NavLink>
+              </li>
+            </ul>
+          )}
+
+          {/* Universal Cart (badge hidden when empty) */}
+          <CartWidget />
+        </div>
       </nav>
     </header>
   );
@@ -578,49 +590,14 @@ export default function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-        <Route 
-        path="/animals" element={
-        <CAnimals />
-        }
-         />
+        <Route path="/animals" element={<CAnimals />} />
+        <Route path="/tickets" element={<CTickets />} />
+        <Route path="/Exhibits" element={<ExhibitsPage />} />
+        <Route path="/request" element={<RequestReceived />} />
+        <Route path="scheduleEvents" element={<ZooScheduler />} />
+        <Route path="/visit" element={<Visit />} />
+        <Route path="/visit/:id" element={<EventDetails />} />
 
-        <Route 
-        path="/tickets" 
-        element={
-        <CTickets/>
-      }
-        />
-        
-         <Route 
-        path="/Exhibits" 
-        element={
-        <ExhibitsPage/>
-        }
-        />
-        <Route 
-        path="/request" 
-        element={
-        <RequestReceived/>
-        }
-        />
-        <Route 
-        path= "scheduleEvents"
-         element={
-        <ZooScheduler/>
-        }
-        />
-        <Route 
-        path="/visit" 
-        element={
-        <Visit />
-        } 
-        />
-        <Route 
-        path="/visit/:id" 
-        element={
-        <EventDetails />
-        } 
-        />
         {/* Protected */}
         <Route
           path="/dashboard"

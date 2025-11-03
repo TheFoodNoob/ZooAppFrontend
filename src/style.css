@@ -355,3 +355,62 @@ body{
   .ticket-head{ flex-direction: column; align-items: flex-start; gap: 2px; }
   .qty-input{ width: 56px; }
 }
+
+/* === Cart widget === */
+.cart-wrapper { position: relative; margin-left: 8px; }
+.cart-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.cart-btn:hover { background: rgba(0,0,0,0.05); }
+.cart-icon { font-size: 18px; line-height: 1; }
+.cart-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  background: #1f7a1f; color: #fff;
+  font-size: 11px; line-height: 1;
+  padding: 2px 6px; border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.cart-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: #fff8e1;
+  border-radius: 12px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+  padding: 12px;
+  z-index: 60;
+}
+.cart-dropdown-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.cart-title { font-weight: 700; font-size: 16px; flex: 1; }
+
+.cart-list { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
+.cart-line { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+.cart-line + .cart-line { border-top: 1px dashed rgba(0,0,0,0.08); }
+.cart-line-name { font-weight: 600; }
+.cart-line-meta { display: flex; align-items: center; gap: 10px; }
+.cart-line-qty { opacity: 0.85; }
+
+.cart-total-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.08);
+}
+.cart-actions { margin-top: 10px; }
+.btn-block { width: 100%; }
+
+/* Minor nav polish to keep spacing tidy */
+.topbar { position: sticky; top: 0; z-index: 40; background: #fff; border-bottom: 1px solid #eee; }
+.topbar-inner { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+.brand { font-weight: 800; color: #0a611a; text-decoration: none; }
+.topnav { display: flex; align-items: center; gap: 14px; }
+.topnav a { text-decoration: none; color: #333; padding: 6px 8px; border-radius: 8px; }
+.topnav a:hover { background: rgba(0,0,0,0.05); }
