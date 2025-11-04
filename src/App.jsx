@@ -6,6 +6,7 @@ import {
   Route,
   Navigate,
   NavLink,
+  useLocation,
 } from "react-router-dom";
 import { api } from "./api";
 import { useAuth } from "./context/AuthContext.jsx";
@@ -65,21 +66,10 @@ function RoleHub() {
 /* ---------- Shared page shell ---------- */
 function CardPage({ title, children }) {
   return (
-    <div className="page" style={{ padding: "24px 0" }}>
-      <div className="container" style={{ maxWidth: 1120, margin: "0 auto" }}>
-        <h2 style={{ margin: "0 0 12px 0" }}>{title}</h2>
-        <div
-          className="card"
-          style={{
-            padding: 20,
-            background: "#fff8e1",
-            borderRadius: 16,
-            boxShadow:
-              "0 2px 6px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.06)",
-          }}
-        >
-          {children}
-        </div>
+    <div className="page card-page">
+      <div className="card-page-inner">
+        <h2 className="card-page-title">{title}</h2>
+        <div className="card card-page-body">{children}</div>
       </div>
     </div>
   );
@@ -476,21 +466,44 @@ function Forbidden() {
 /* ---------- Top Nav (container + grouped links + anchored cart) ---------- */
 function Nav() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <header className="topbar">
       <div className="container nav">
         <div className="nav-inner">
-          <div className="brand">H-Town Zoo</div>
+          <div className="nav-left">
+            <button
+              className={`menu-toggle${menuOpen ? " is-open" : ""}`}
+              type="button"
+              onClick={toggleMenu}
+              aria-label="Toggle navigation menu"
+              aria-expanded={menuOpen}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div className="brand">H-Town Zoo</div>
+          </div>
 
           <div className="nav-right">
-            <ul className="links">
+            <ul className={`links${menuOpen ? " is-open" : ""}`}>
               {user ? (
                 <>
                   <li>
                     <NavLink
                       to="/dashboard"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       Dashboard
                     </NavLink>
@@ -500,6 +513,7 @@ function Nav() {
                       <NavLink
                         to="/employees"
                         className={({ isActive }) => (isActive ? "active" : "")}
+                        onClick={closeMenu}
                       >
                         Employees
                       </NavLink>
@@ -510,6 +524,7 @@ function Nav() {
                       <NavLink
                         to="/reports"
                         className={({ isActive }) => (isActive ? "active" : "")}
+                        onClick={closeMenu}
                       >
                         Reports
                       </NavLink>
@@ -520,6 +535,7 @@ function Nav() {
                       <NavLink
                         to="/events"
                         className={({ isActive }) => (isActive ? "active" : "")}
+                        onClick={closeMenu}
                       >
                         Events
                       </NavLink>
@@ -529,6 +545,7 @@ function Nav() {
                     <NavLink
                       to="/role"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       My Role
                     </NavLink>
@@ -536,7 +553,10 @@ function Nav() {
                   <li>
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={logout}
+                      onClick={() => {
+                        closeMenu();
+                        logout();
+                      }}
                       type="button"
                     >
                       Logout
@@ -549,6 +569,7 @@ function Nav() {
                     <NavLink
                       to="/"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       Home
                     </NavLink>
@@ -557,6 +578,7 @@ function Nav() {
                     <NavLink
                       to="/visit"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       Visit
                     </NavLink>
@@ -565,6 +587,7 @@ function Nav() {
                     <NavLink
                       to="/tickets"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       Tickets
                     </NavLink>
@@ -573,6 +596,7 @@ function Nav() {
                     <NavLink
                       to="/login"
                       className={({ isActive }) => (isActive ? "active" : "")}
+                      onClick={closeMenu}
                     >
                       Login
                     </NavLink>
@@ -582,7 +606,7 @@ function Nav() {
             </ul>
 
             {/* Cart is anchored to this box so the dropdown never runs off-screen */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
+            <div className="nav-cart">
               <CartWidget />
             </div>
           </div>
