@@ -463,152 +463,148 @@ function Forbidden() {
   );
 }
 
-/* ---------- Top Nav (container + grouped links + anchored cart) ---------- */
+/* ---------- Top Nav (centered container + anchored mobile menu) ---------- */
 function Nav() {
   const { user, logout } = useAuth();
+  const [open, setOpen] = React.useState(false);
+  const btnRef = React.useRef(null);
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = React.useState(false);
 
+  // close on outside click
   React.useEffect(() => {
-    setMenuOpen(false);
+    function onDocClick(e) {
+      if (!btnRef.current) return;
+      const anchor = btnRef.current.closest(".nav-anchor");
+      if (anchor && !anchor.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
+
+  // close on route change
+  React.useEffect(() => {
+    setOpen(false);
   }, [location.pathname]);
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const closeMenu = () => setMenuOpen(false);
+  const AuthLinks = ({ onClick }) => (
+    <>
+      <li>
+        <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          Dashboard
+        </NavLink>
+      </li>
+      {(user.role === "admin" || user.role === "ops_manager") && (
+        <li>
+          <NavLink to="/employees" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+            Employees
+          </NavLink>
+        </li>
+      )}
+      {user.role === "admin" && (
+        <li>
+          <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+            Reports
+          </NavLink>
+        </li>
+      )}
+      {(user.role === "admin" || user.role === "ops_manager") && (
+        <li>
+          <NavLink to="/events" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+            Events
+          </NavLink>
+        </li>
+      )}
+      <li>
+        <NavLink to="/role" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          My Role
+        </NavLink>
+      </li>
+      <li>
+        <button
+          className="btn btn-ghost btn-sm"
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            logout();
+          }}
+        >
+          Logout
+        </button>
+      </li>
+    </>
+  );
+
+  const PublicLinks = ({ onClick }) => (
+    <>
+      <li>
+        <NavLink to="/" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          Home
+        </NavLink>
+      </li>
+      <li>
+        <NavLink to="/visit" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          Visit
+        </NavLink>
+      </li>
+      <li>
+        <NavLink to="/tickets" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          Tickets
+        </NavLink>
+      </li>
+      <li>
+        <NavLink to="/login" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          Login
+        </NavLink>
+      </li>
+    </>
+  );
 
   return (
-    <header className="topbar">
-      <div className="container nav">
-        <div className="nav-inner">
-          <div className="nav-left">
-            <button
-              className={`menu-toggle${menuOpen ? " is-open" : ""}`}
-              type="button"
-              onClick={toggleMenu}
-              aria-label="Toggle navigation menu"
-              aria-expanded={menuOpen}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-            <div className="brand">H-Town Zoo</div>
+    <header className="topbar" style={{ position: "sticky", top: 0, zIndex: 50 }}>
+      <div
+        className="nav"
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "10px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <div className="brand" style={{ fontWeight: 800 }}>H-Town Zoo</div>
+
+        {/* Desktop links */}
+        <ul className="links hide-on-mobile">
+          {user ? <AuthLinks /> : <PublicLinks />}
+        </ul>
+
+        {/* Right: Cart + mobile menu */}
+        <div className="nav-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <CartWidget />
           </div>
 
-          <div className="nav-right">
-            <ul className={`links${menuOpen ? " is-open" : ""}`}>
-              {user ? (
-                <>
-                  <li>
-                    <NavLink
-                      to="/dashboard"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      Dashboard
-                    </NavLink>
-                  </li>
-                  {(user.role === "admin" || user.role === "ops_manager") && (
-                    <li>
-                      <NavLink
-                        to="/employees"
-                        className={({ isActive }) => (isActive ? "active" : "")}
-                        onClick={closeMenu}
-                      >
-                        Employees
-                      </NavLink>
-                    </li>
-                  )}
-                  {user.role === "admin" && (
-                    <li>
-                      <NavLink
-                        to="/reports"
-                        className={({ isActive }) => (isActive ? "active" : "")}
-                        onClick={closeMenu}
-                      >
-                        Reports
-                      </NavLink>
-                    </li>
-                  )}
-                  {(user.role === "admin" || user.role === "ops_manager") && (
-                    <li>
-                      <NavLink
-                        to="/events"
-                        className={({ isActive }) => (isActive ? "active" : "")}
-                        onClick={closeMenu}
-                      >
-                        Events
-                      </NavLink>
-                    </li>
-                  )}
-                  <li>
-                    <NavLink
-                      to="/role"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      My Role
-                    </NavLink>
-                  </li>
-                  <li>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        closeMenu();
-                        logout();
-                      }}
-                      type="button"
-                    >
-                      Logout
-                    </button>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li>
-                    <NavLink
-                      to="/"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      Home
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/visit"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      Visit
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/tickets"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      Tickets
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/login"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                      onClick={closeMenu}
-                    >
-                      Login
-                    </NavLink>
-                  </li>
-                </>
-              )}
-            </ul>
+          <div className="nav-anchor">
+            <button
+              ref={btnRef}
+              className="mobile-menu-btn"
+              aria-haspopup="true"
+              aria-expanded={open}
+              aria-label="Open menu"
+              onClick={() => setOpen((v) => !v)}
+            >
+              <span className="mobile-menu-icon" />
+            </button>
 
-            {/* Cart is anchored to this box so the dropdown never runs off-screen */}
-            <div className="nav-cart">
-              <CartWidget />
-            </div>
+            {open && (
+              <div className="mobile-menu" role="menu">
+                <ul>
+                  {user ? <AuthLinks onClick={() => setOpen(false)} /> : <PublicLinks onClick={() => setOpen(false)} />}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>

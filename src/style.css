@@ -569,3 +569,78 @@ footer{
 .event-card-wide__actions{
   margin-top:6px;
 }
+
+/* Hide desktop links on small screens */
+@media (max-width: 900px){
+  .hide-on-mobile { display: none !important; }
+}
+
+/* Mobile menu anchor & button */
+.nav-anchor { position: relative; }
+
+.mobile-menu-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: 1px solid #dcd6b2;
+  background: #fffef8;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.mobile-menu-btn:active { transform: translateY(1px); }
+
+/* Simple hamburger glyph */
+.mobile-menu-icon{
+  width: 18px; height: 2px; background: var(--ink);
+  position: relative; display: inline-block;
+}
+.mobile-menu-icon::before,
+.mobile-menu-icon::after{
+  content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--ink);
+}
+.mobile-menu-icon::before{ top: -6px; }
+.mobile-menu-icon::after{ top: 6px; }
+
+/* Anchored dropdown */
+.mobile-menu{
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1200;
+  width: 220px;
+  max-width: 92vw;
+  background: #fffef8;
+  border: 1px solid #eee4bc;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12), 0 20px 56px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.mobile-menu ul{
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+}
+.mobile-menu li a,
+.mobile-menu li .btn{
+  display: block;
+  width: 100%;
+  text-align: center;       /* center labels */
+  white-space: nowrap;      /* prevent wrapping/cutoff */
+  overflow: hidden;
+  text-overflow: ellipsis;  /* if it gets really tight */
+  padding: .6rem .8rem;
+  border-radius: .65rem;
+  border: 1px solid #eadfae;
+  background: #fff;
+  font-weight: 700;
+}
+.mobile-menu li a.active{
+  background:#eaf6ee; color:#0b7b2a; border-color:#cae9cf;
+}
+
+/* Keep topbar looking crisp on mobile too */
+.topbar { box-shadow: 0 2px 6px rgba(0,0,0,.04); }
