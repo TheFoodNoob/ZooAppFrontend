@@ -31,12 +31,13 @@ export default function ZooHomePage() {
   const [heroIdx, setHeroIdx] = React.useState(0);
   const [upcoming, setUpcoming] = React.useState([]);
   const [loadingEvt, setLoadingEvt] = React.useState(true);
+  const [paused, setPaused] = React.useState(false);
 
   React.useEffect(() => {
-    // auto-rotate hero every 5s
-    const id = setInterval(() => setHeroIdx((i) => (i + 1) % heroSources.length), 5000);
+    if (paused) return;
+    const id = setInterval(() => setHeroIdx((i) => (i + 1) % heroSources.length), 6000);
     return () => clearInterval(id);
-  }, []);
+  }, [paused]);
 
   React.useEffect(() => {
     // Fetch events, keep only future, take next 3 by start_time
@@ -65,30 +66,23 @@ export default function ZooHomePage() {
       <div className="container home-hero">
         {/* Hero Section */}
         <section className="section">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0,560px) 1fr",
-              gap: 24,
-              alignItems: "start",
-            }}
-          >
+          <div className="hero-split">
             {/* Left Side Text */}
-            <div>
+            <div className="hero-left">
               <div
                 style={{
                   fontSize: 12,
                   letterSpacing: ".06em",
                   textTransform: "uppercase",
-                  color: "#0a7a2a",
+                  color: "#d1fae5",
                   fontWeight: 800,
                   marginBottom: 6,
                 }}
               >
                 Welcome to H-Town Zoo
               </div>
-              <h1>Wildlife, Conservation, and Family Fun—right here in Houston.</h1>
-              <p style={{ marginTop: 8, color: "var(--ink-2)" }}>
+              <h1>Wildlife, Conservation, and Family Fun&mdash;right here in Houston.</h1>
+              <p style={{ marginTop: 8, color: "#eef2f7" }}>
                 Meet lions, sea lions, kangaroos and more across immersive exhibits. Every visit supports animal care and
                 conservation.
               </p>
@@ -102,57 +96,48 @@ export default function ZooHomePage() {
                 </a>
               </div>
             </div>
-
-            {/* Right: simple image carousel */}
-            <div className="panel" style={{ minHeight: 260, position: "relative", overflow: "hidden" }}>
-              <img
-                src={heroSources[heroIdx]}
-                alt="Zoo highlight"
-                style={{
-                  width: "100%",
-                  height: 260,
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  display: "block",
-                }}
-              />
+            {/* Right: image carousel (new) */}
+            <div
+              className="hero-right"
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+              onFocusCapture={() => setPaused(true)}
+              onBlurCapture={() => setPaused(false)}
+            >
+              {heroSources.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt="Zoo highlight"
+                  className={"hero-slide" + (i === heroIdx ? " is-active" : "")}
+                />
+              ))}
               {/* Carousel controls */}
               <button
-                className="btn btn-ghost btn-sm"
-                aria-label="Prev image"
+                className="hero-btn left"
+                aria-label="Previous slide"
                 onClick={() => setHeroIdx((i) => (i - 1 + heroSources.length) % heroSources.length)}
-                style={{ position: "absolute", top: 12, left: 12 }}
-              >
-                ‹
-              </button>
+              />
               <button
-                className="btn btn-ghost btn-sm"
-                aria-label="Next image"
+                className="hero-btn right"
+                aria-label="Next slide"
                 onClick={() => setHeroIdx((i) => (i + 1) % heroSources.length)}
-                style={{ position: "absolute", top: 12, right: 12 }}
-              >
-                ›
-              </button>
+              />
               {/* Dots */}
-              <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, textAlign: "center" }}>
+              <div className="hero-dots">
                 {heroSources.map((_, i) => (
-                  <span
+                  <button
                     key={i}
+                    className="hero-dot-btn"
+                    aria-label={`Go to slide ${i + 1}`}
+                    aria-current={i === heroIdx ? "true" : undefined}
                     onClick={() => setHeroIdx(i)}
-                    style={{
-                      display: "inline-block",
-                      width: 8,
-                      height: 8,
-                      margin: "0 3px",
-                      borderRadius: 999,
-                      background: i === heroIdx ? "#166534" : "#d8d8c6",
-                      cursor: "pointer",
-                    }}
                   />
                 ))}
               </div>
             </div>
-          </div>
+          
+            </div>
         </section>
 
         {/* Quick Links + Promos */}
@@ -180,7 +165,7 @@ export default function ZooHomePage() {
 
               {loadingEvt ? (
                 <div className="note" style={{ background: "transparent", border: 0, padding: 0 }}>
-                  Loading upcoming events…
+                  Loading upcoming events&hellip;
                 </div>
               ) : upcoming.length === 0 ? (
                 <div className="note" style={{ background: "transparent", border: 0, padding: 0 }}>
@@ -194,8 +179,8 @@ export default function ZooHomePage() {
                       <div className="mini-event-main">
                         <div className="mini-event-title">{e.name || e.event_name}</div>
                         <div className="mini-event-time">
-                          {fmtTime(e.start_time)} – {fmtTime(e.end_time)}
-                          {e.location ? ` • ${e.location}` : ""}
+                          {fmtTime(e.start_time)}&mdash;{fmtTime(e.end_time)}
+                          {e.location ? ` \u2022 ${e.location}` : ""}
                         </div>
                       </div>
                     </li>
@@ -263,7 +248,7 @@ export default function ZooHomePage() {
           >
             <div>
               <strong>H-Town Zoo</strong>
-              <div>123 Safari Way, Houston, TX • Open daily 9am–5pm</div>
+              <div>123 Safari Way, Houston, TX &mdash; Open daily 9am&ndash;5pm</div>
             </div>
             <div>
               <strong>Visit</strong>
@@ -295,3 +280,15 @@ export default function ZooHomePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,8 +1,49 @@
 // src/pages/customer/EventDetails.jsx
 import React from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
+
+/* ---------- Image helper ---------- */
+function getEventImg(evt) {
+  // If DB provides a non-empty custom URL
+  if (evt?.image_url && evt.image_url.trim()) return evt.image_url;
+
+  const hay = `${evt?.title || evt?.name || ""} ${evt?.event_title || ""} ${evt?.location || ""}`.toLowerCase();
+
+  if (hay.includes("penguin")) return "/img/penguinparade.jpg";
+  if (hay.includes("reptile") || hay.includes("snake") || hay.includes("lizard")) return "/img/reptile.jpg";
+  if (hay.includes("lion") || hay.includes("big cat")) return "/img/lion.webp";
+  if (hay.includes("bird")) return "/img/birds.webp";
+  if (hay.includes("safari") || hay.includes("story")) return "/img/safaristorytime.jpg";
+  if (hay.includes("seal") || hay.includes("sea lion")) return "/img/harborSeal.webp";
+  return "/img/bigSeal.jpg";
+}
+
+
+/* ---------- Date/Time helpers (fix for fmtDate/fmtTime) ---------- */
+function fmtDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return iso || "";
+  }
+}
+function fmtTime(iso) {
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -14,26 +55,14 @@ export default function EventDetails() {
   const [loading, setLoading] = React.useState(!state?.event);
   const [err, setErr] = React.useState("");
 
-  const fmtDateTime = (s) => {
-    try {
-      return new Date(s).toLocaleString(undefined, {
-        dateStyle: "full",
-        timeStyle: "short",
-      });
-    } catch {
-      return s || "";
-    }
-  };
-
   React.useEffect(() => {
-    if (state?.event) return; // hydrate-only; already have data
+    if (state?.event) return; // already hydrated
 
     (async () => {
       setLoading(true);
       setErr("");
       try {
         let data;
-
         if (!token) {
           const res = await fetch(`${api}/api/public/events/${id}`);
           if (!res.ok) throw new Error(`Failed to load event (${res.status})`);
@@ -54,7 +83,6 @@ export default function EventDetails() {
             setIsPublic(false);
           }
         }
-
         setEvent(data || null);
       } catch (e) {
         setErr(e.message || "Failed to load event");
@@ -70,7 +98,7 @@ export default function EventDetails() {
         <h1>Event Details</h1>
         <div className="panel">
           <div className="card" style={{ padding: 16 }}>
-            <div className="note">Loading…</div>
+            <div className="note">Loading&hellip;</div>
           </div>
         </div>
       </div>
@@ -92,29 +120,36 @@ export default function EventDetails() {
 
   return (
     <div className="page">
-      <h1>{title}</h1>
-      <div className="panel">
-        <div className="card" style={{ padding: 16 }}>
-          {event.start_time && (
-            <div style={{ marginBottom: 6 }}>
-              <strong>Starts:</strong> {fmtDateTime(event.start_time)}
-            </div>
-          )}
-          {event.end_time && (
-            <div style={{ marginBottom: 6 }}>
-              <strong>Ends:</strong> {fmtDateTime(event.end_time)}
-            </div>
-          )}
-          {event.location && (
-            <div style={{ marginBottom: 6 }}>
-              <strong>Location:</strong> {event.location}
-            </div>
-          )}
-          {event.description && (
-            <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>
-              {event.description}
-            </div>
-          )}
+      <div className="event-details">
+        {/* Hero image with overlay title */}
+        <div className="event-hero">
+          <img src={getEventImg(event)} alt={title} />
+          <div className="event-hero__overlay">
+            <h1>{title}</h1>
+            {event.location && <div className="event-hero__loc">{event.location}</div>}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="event-details__content card">
+          <div className="event-details__row">
+            {event.start_time && (
+              <div>
+                <strong>Starts:</strong> {fmtDate(event.start_time)} {fmtTime(event.start_time)}
+              </div>
+            )}
+            {event.end_time && (
+              <div>
+                <strong>Ends:</strong> {fmtDate(event.end_time)} {fmtTime(event.end_time)}
+              </div>
+            )}
+            {event.description && <p style={{ marginTop: 10 }}>{event.description}</p>}
+          </div>
+
+          <div className="event-details__actions">
+            <Link className="btn btn-primary" to="/tickets">Get Tickets</Link>
+            <Link className="btn btn-ghost" to="/visit">Back to events</Link>
+          </div>
 
           {!isPublic && (
             <>
@@ -130,13 +165,13 @@ export default function EventDetails() {
               )}
             </>
           )}
-        </div>
 
-        {isPublic && (
-          <div className="note" style={{ marginTop: 10 }}>
-            Public mode: showing limited details. Log in for full info.
-          </div>
-        )}
+          {isPublic && (
+            <div className="note" style={{ marginTop: 10 }}>
+              Public mode: showing limited details. Log in for full info.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
