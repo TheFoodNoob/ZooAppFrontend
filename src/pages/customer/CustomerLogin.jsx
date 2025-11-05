@@ -1,4 +1,5 @@
 import React from "react";
+import { NavLink } from "react-router-dom"; 
 import { useAuth } from "../../context/AuthContext";
 
 export default function CustomerLogin() {
@@ -18,9 +19,14 @@ export default function CustomerLogin() {
     e.preventDefault();
     setMsg("");
     const first_name = prompt("First name") || "";
-    const last_name  = prompt("Last name") || "";
-    const pass       = prompt("Create password") || "";
-    const res = await registerCustomer({ first_name, last_name, email, password: pass });
+    const last_name = prompt("Last name") || "";
+    const pass = prompt("Create password") || "";
+    const res = await registerCustomer({
+      first_name,
+      last_name,
+      email,
+      password: pass,
+    });
     if (!res.ok) setMsg(res.error || "Could not create account");
   }
 
@@ -39,6 +45,7 @@ export default function CustomerLogin() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+
             <label>Password</label>
             <input
               type="password"
@@ -47,20 +54,37 @@ export default function CustomerLogin() {
               required
             />
 
+            {/* Forgot password link */}
+            <div style={{ textAlign: "left", marginTop: 6 }}>
+              <NavLink to="/forgot" style={{ fontSize: 12 }}>
+                Forgot password?
+              </NavLink>
+            </div>
+
             <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn btn-primary" type="submit">Login</button>
+              <button className="btn btn-primary" type="submit">
+                Login
+              </button>
               <button className="btn" type="button" onClick={onRegister}>
                 Create account
               </button>
             </div>
 
-            {msg && <div className="error" style={{ marginTop: 10 }}>{msg}</div>}
+            {msg && (
+              <div className="error" style={{ marginTop: 10 }}>
+                {msg}
+              </div>
+            )}
           </form>
         </div>
 
         {/* Little helper note */}
         <div className="note" style={{ marginTop: 12 }}>
-          Employees: please use the <a href="/staff/login">Staff Login</a>.
+          Employees: please use the{" "}
+          <a href="/staff/login" style={{ textDecoration: "underline" }}>
+            Staff Login
+          </a>
+          .
         </div>
       </div>
     </div>

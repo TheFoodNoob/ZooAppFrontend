@@ -28,6 +28,11 @@ import Visit from "./pages/customer/Visit.jsx";
 import ZooScheduler from "./pages/customer/ZooScheduler.jsx";
 import RequestReceived from "./pages/customer/RequestRecieved.jsx";
 import EventDetails from "./pages/customer/EventDetails.jsx";
+import Forgot from "./pages/customer/Forgot.jsx";
+import Reset from "./pages/customer/Reset.jsx";
+import StaffForgot from "./pages/employee/StaffForgot.jsx";
+import StaffReset from "./pages/employee/StaffReset.jsx";
+
 
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
@@ -642,6 +647,11 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
+        <Route path="/forgot" element={<Forgot />} />
+        <Route path="/reset/:token" element={<Reset />} />
+        <Route path="/staff/forgot" element={<StaffForgot />} />
+        <Route path="/staff/reset/:token" element={<StaffReset />} />
+
 
         {/* Auth pages (block if already logged in) */}
         <Route

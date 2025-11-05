@@ -1,4 +1,5 @@
 import React from "react";
+import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export default function StaffLogin() {
@@ -36,6 +37,7 @@ export default function StaffLogin() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <NavLink to="/staff/forgot" style={{fontSize:12}}>Forgot password?</NavLink>
 
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn btn-primary" type="submit">Login</button>
