@@ -17,7 +17,9 @@ import CartWidget from "./components/CartWidget.jsx";
 
 // Public
 import Home from "./pages/ZooHomePage.jsx";
-import Login from "./pages/Login.jsx";
+import CustomerLogin from "./pages/customer/CustomerLogin.jsx";
+import CustomerRegister from "./pages/customer/Register.jsx"; // NEW
+import StaffLogin from "./pages/employee/StaffLogin";
 import Lost from "./pages/Lost.jsx";
 import CAnimals from "./pages/customer/Animals.jsx";
 import CTickets from "./pages/customer/Tickets.jsx";
@@ -61,6 +63,12 @@ function RoleHub() {
   };
   const dest = map[user.role] || "/dashboard";
   return <Navigate to={dest} replace />;
+}
+
+/* helper wrappers to block login pages when already authenticated */
+function RedirectIfAuthed({ children }) {
+  const { user } = useAuth();
+  return user ? <Navigate to="/" replace /> : children;
 }
 
 /* ---------- Shared page shell ---------- */
@@ -463,14 +471,13 @@ function Forbidden() {
   );
 }
 
-/* ---------- Top Nav (centered container + anchored mobile menu) ---------- */
+/* ---------- Top Nav (removed “Staff” text link) ---------- */
 function Nav() {
   const { user, logout } = useAuth();
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef(null);
   const location = useLocation();
 
-  // close on outside click
   React.useEffect(() => {
     function onDocClick(e) {
       if (!btnRef.current) return;
@@ -481,7 +488,6 @@ function Nav() {
     return () => document.removeEventListener("click", onDocClick);
   }, []);
 
-  // close on route change
   React.useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -612,20 +618,57 @@ function Nav() {
   );
 }
 
+/* ---------- Footer with Staff Login link ---------- */
+function SiteFooter() {
+  return (
+    <footer>
+      <div className="container" style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap"}}>
+        <div style={{fontWeight:800}}>H-Town Zoo</div>
+        <div style={{fontSize:13, opacity:.85}}>© {new Date().getFullYear()} H-Town Zoo</div>
+        <div style={{display:"flex", gap:14, alignItems:"center"}}>
+          <NavLink to="/login">Customer Login</NavLink>
+          <a className="staff-link" href="/staff/login" title="Employee portal">Staff Login</a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 /* ---------- App Routes ---------- */
 export default function App() {
-  const { user } = useAuth();
-
   return (
     <BrowserRouter>
       <Nav />
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
+
+        {/* Auth pages (block if already logged in) */}
         <Route
           path="/login"
-          element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={
+            <RedirectIfAuthed>
+              <CustomerLogin />
+            </RedirectIfAuthed>
+          }
         />
+        <Route
+          path="/register"
+          element={
+            <RedirectIfAuthed>
+              <CustomerRegister />
+            </RedirectIfAuthed>
+          }
+        />
+        <Route
+          path="/staff/login"
+          element={
+            <RedirectIfAuthed>
+              <StaffLogin />
+            </RedirectIfAuthed>
+          }
+        />
+
         <Route path="/animals" element={<CAnimals />} />
         <Route path="/tickets" element={<CTickets />} />
         <Route path="/Exhibits" element={<ExhibitsPage />} />
@@ -634,7 +677,7 @@ export default function App() {
         <Route path="/visit" element={<Visit />} />
         <Route path="/visit/:id" element={<EventDetails />} />
 
-        {/* Protected */}
+        {/* Protected (any employee) */}
         <Route
           path="/dashboard"
           element={
@@ -709,6 +752,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin hub */}
         <Route
           path="/admin"
           element={
@@ -747,13 +792,20 @@ export default function App() {
         />
 
         {/* Animals (employee) */}
-        <Route path="/animalStats" element={<Animals />} />
+        <Route
+          path="/animalStats"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <Animals />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Reports */}
         <Route
           path="/reports"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["admin"]}>
               <Reports />
             </ProtectedRoute>
           }
@@ -796,6 +848,8 @@ export default function App() {
         <Route path="/403" element={<Forbidden />} />
         <Route path="*" element={<Lost />} />
       </Routes>
+
+      <SiteFooter />
     </BrowserRouter>
   );
 }

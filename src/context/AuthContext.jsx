@@ -1,70 +1,82 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken]   = useState(null);
-  const [user, setUser]     = useState(null);
-  const [loading, setLoading] = useState(true); // blocks UI until we know
+  const [user, setUser]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem("authUser") || "null"); } catch { return null; }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem("authToken") || null);
 
-  // Load token from storage on first mount, then fetch /me
-  useEffect(() => {
-    const stored = localStorage.getItem("jwt");
-    if (!stored) {
-      setLoading(false);
-      return;
-    }
-    setToken(stored);
-    fetchMe(stored).finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { user  ? localStorage.setItem("authUser",  JSON.stringify(user)) : localStorage.removeItem("authUser"); }, [user]);
+  useEffect(() => { token ? localStorage.setItem("authToken", token)               : localStorage.removeItem("authToken"); }, [token]);
 
-  async function fetchMe(tok) {
+  const loginEmployee = async (email, password) => {
     try {
-      const res = await fetch(`${api}/api/employee/me`, {
-        headers: { Authorization: `Bearer ${tok}` },
+      const r = await fetch(`${api}/api/employees/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
       });
-      if (res.status === 401) {
-        // invalid/expired token
-        logout();
-        return;
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        return { ok:false, error: err.error || "Login failed" };
       }
-      const data = await res.json();
-      setUser(data);
-    } catch (e) {
-      console.error("Failed to fetch /me:", e);
+      const data = await r.json();
+      setUser({ ...data.user, role: data.user.role || "employee" });
+      setToken(data.token);
+      return { ok:true, role:"employee" };
+    } catch {
+      return { ok:false, error:"Network error" };
     }
-  }
+  };
 
-  async function login(email, password) {
-    const res = await fetch(`${api}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Login failed");
+  const loginCustomer = async (email, password) => {
+    try {
+      const r = await fetch(`${api}/api/auth/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        return { ok:false, error: err.error || "Login failed" };
+      }
+      const data = await r.json();
+      setUser({ ...data.user, role: "customer" });
+      setToken(data.token);
+      return { ok:true, role:"customer" };
+    } catch {
+      return { ok:false, error:"Network error" };
     }
+  };
 
-    const { token: jwt } = await res.json();
-    localStorage.setItem("jwt", jwt);
-    setToken(jwt);
-    await fetchMe(jwt);
-    return true;
-  }
+  const registerCustomer = async ({ first_name, last_name, email, password, phone }) => {
+    try {
+      const r = await fetch(`${api}/api/auth/register`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name, last_name, email, password, phone })
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        return { ok:false, error: err.error || "Register failed" };
+      }
+      const data = await r.json();
+      setUser({ ...data.user, role: "customer" });
+      setToken(data.token);
+      return { ok:true };
+    } catch {
+      return { ok:false, error:"Network error" };
+    }
+  };
 
-  function logout() {
-  localStorage.removeItem("jwt");
-  setToken(null);
-  setUser(null);
-}
+  const logout = () => { setUser(null); setToken(null); };
 
-  const value = { token, user, loading, login, logout };
+  const value = useMemo(() => ({
+    user, token, loginEmployee, loginCustomer, registerCustomer, logout
+  }), [user, token]);
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth(){ return useContext(AuthContext); }
