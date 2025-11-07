@@ -73,7 +73,7 @@ function RoleHub() {
 /* helper wrappers to block login pages when already authenticated */
 function RedirectIfAuthed({ children }) {
   const { user } = useAuth();
-  return user ? <Navigate to="/" replace /> : children;
+  return user ? <Navigate to="/dashboard" replace /> : children;
 }
 
 /* ---------- Shared page shell ---------- */

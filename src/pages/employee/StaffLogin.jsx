@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate,useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export default function StaffLogin() {
@@ -7,13 +7,14 @@ export default function StaffLogin() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [msg, setMsg] = React.useState("");
-
+  const navigate = useNavigate(); 
+  const loc = useLocation();
   async function onLogin(e) {
     e.preventDefault();
     setMsg("");
     const r = await loginEmployee(email, password);
-    if (!r.ok) setMsg(r.error || "Login failed");
-  }
+    if (!r.ok)  setMsg(r.error || "Login failed");
+  } 
 
   return (
     <div className="page">
