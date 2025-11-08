@@ -32,7 +32,7 @@ export default function Dashboard() {
           {user.role === "keeper" && (
             <ul>
               <li><Link to="/keeper">my tasks</Link></li>
-              <li><Link to="/animals">animal directory</Link></li>
+              <li><Link to="/animalStats">animal directory</Link></li>
             </ul>
           )}
         </div>
