@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import {
   BrowserRouter,
@@ -33,7 +32,6 @@ import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
 
-
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
 import Animals from "./pages/employee/Animals.jsx";
@@ -51,6 +49,18 @@ import GateAgent from "./pages/employee/GateAgent.jsx";
 import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
+
+/* ---------- Any-employee roles helper ---------- */
+const ANY_EMP = [
+  "keeper",
+  "vet",
+  "gate_agent",
+  "ops_manager",
+  "retail",
+  "coordinator",
+  "security",
+  "admin",
+];
 
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
@@ -652,7 +662,6 @@ export default function App() {
         <Route path="/staff/forgot" element={<StaffForgot />} />
         <Route path="/staff/reset/:token" element={<StaffReset />} />
 
-
         {/* Auth pages (block if already logged in) */}
         <Route
           path="/login"
@@ -691,7 +700,7 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={ANY_EMP}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -699,7 +708,7 @@ export default function App() {
         <Route
           path="/role"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={ANY_EMP}>
               <RoleHub />
             </ProtectedRoute>
           }
