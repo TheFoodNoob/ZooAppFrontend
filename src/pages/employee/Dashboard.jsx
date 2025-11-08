@@ -33,6 +33,7 @@ export default function Dashboard() {
             <ul>
               <li><Link to="/keeper">my tasks</Link></li>
               <li><Link to="/animalStats">animal directory</Link></li>
+              <li><Link to = "/feedings">view feeding logs</Link></li>
             </ul>
           )}
         </div>

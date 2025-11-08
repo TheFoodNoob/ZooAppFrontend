@@ -42,6 +42,7 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
+import Feedings from "./pages/employee/Feeding.jsx";
 
 // Role landing pages
 import Vet from "./pages/employee/Vet.jsx";
@@ -723,6 +724,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        
         <Route
           path="/vet"
           element={
@@ -819,7 +821,15 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+        {/* Feedings (employee) */}
+         <Route
+          path="/feedings"
+          element={
+            <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
+              <Feedings />
+            </ProtectedRoute>
+          }
+        />
         {/* Reports */}
         <Route
           path="/reports"
