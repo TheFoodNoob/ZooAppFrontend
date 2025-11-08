@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 
+//TODO:: Need to be able to edit/add/delete animals similar to how employee currently is
+
 export default function Animals() {
   const [list, setList] = useState([]);         // all animals from API
   const [filtered, setFiltered] = useState([]); // filtered list to display

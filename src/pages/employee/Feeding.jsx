@@ -9,7 +9,7 @@ export default function Feedings() {
   const [form, setForm] = useState({ animal_id: "", feeding_time: "" });
   const [msg, setMsg] = useState("");
 
-  // Load feedings and animals on mount
+  // Load feedings and animals on mount/backend
   useEffect(() => {
     loadFeedings();
     loadAnimals();
