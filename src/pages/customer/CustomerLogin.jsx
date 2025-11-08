@@ -1,42 +1,47 @@
+// src/pages/customer/CustomerLogin.jsx
 import React from "react";
-import { NavLink } from "react-router-dom"; 
+import { NavLink, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export default function CustomerLogin() {
-  const { loginCustomer, registerCustomer } = useAuth();
+  const { loginCustomer } = useAuth();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [msg, setMsg] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const navigate = useNavigate();
+  const loc = useLocation();
+
+  const flashMsg = loc.state?.flash?.message || "";
 
   async function onLogin(e) {
     e.preventDefault();
     setMsg("");
+    setSubmitting(true);
     const r = await loginCustomer(email, password);
-    if (!r.ok) setMsg(r.error || "Login failed");
-  }
+    setSubmitting(false);
 
-  async function onRegister(e) {
-    e.preventDefault();
-    setMsg("");
-    const first_name = prompt("First name") || "";
-    const last_name = prompt("Last name") || "";
-    const pass = prompt("Create password") || "";
-    const res = await registerCustomer({
-      first_name,
-      last_name,
-      email,
-      password: pass,
-    });
-    if (!res.ok) setMsg(res.error || "Could not create account");
+    if (!r.ok) {
+      setMsg(r.error || "Login failed");
+    } else {
+      // Send them back to where they came from, or to home.
+      const backTo = loc.state?.from?.pathname
+        ? loc.state.from.pathname + (loc.state.from.search || "")
+        : "/";
+      navigate(backTo, { replace: true });
+    }
   }
 
   return (
     <div className="page">
       <h1>Login</h1>
 
-      {/* Center the card */}
       <div className="auth-wrap" style={{ width: "min(560px, 94vw)" }}>
         <div className="auth-card">
+          {/* Flash from ProtectedRoute */}
+          {flashMsg && <div className="note" style={{ marginBottom: 12 }}>{flashMsg}</div>}
+
           <form onSubmit={onLogin}>
             <label>Email</label>
             <input
@@ -44,6 +49,7 @@ export default function CustomerLogin() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="username"
             />
 
             <label>Password</label>
@@ -52,39 +58,28 @@ export default function CustomerLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
             />
 
-            {/* Forgot password link */}
-            <div style={{ textAlign: "left", marginTop: 6 }}>
-              <NavLink to="/forgot" style={{ fontSize: 12 }}>
-                Forgot password?
-              </NavLink>
-            </div>
+            <NavLink to="/forgot" style={{ fontSize: 12 }}>Forgot password?</NavLink>
 
-            <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn btn-primary" type="submit">
-                Login
+            <div className="row" style={{ marginTop: 10, gap: 10 }}>
+              <button className="btn btn-primary" type="submit" disabled={submitting}>
+                {submitting ? "Logging in…" : "Login"}
               </button>
-              <button className="btn" type="button" onClick={onRegister}>
+
+              {/* Go to proper registration page */}
+              <Link className="btn" to="/register">
                 Create account
-              </button>
+              </Link>
             </div>
 
-            {msg && (
-              <div className="error" style={{ marginTop: 10 }}>
-                {msg}
-              </div>
-            )}
+            {msg && <div className="error" style={{ marginTop: 10 }}>{msg}</div>}
           </form>
         </div>
 
-        {/* Little helper note */}
         <div className="note" style={{ marginTop: 12 }}>
-          Employees: please use the{" "}
-          <a href="/staff/login" style={{ textDecoration: "underline" }}>
-            Staff Login
-          </a>
-          .
+          Employees: please use the <a href="/staff/login">Staff Login</a>.
         </div>
       </div>
     </div>

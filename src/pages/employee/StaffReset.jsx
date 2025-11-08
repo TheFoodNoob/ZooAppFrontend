@@ -1,23 +1,25 @@
-// src/pages/employee/StaffReset.jsx
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 
 export default function StaffReset() {
-  const { token } = useParams();
+  const { token = "" } = useParams();
   const nav = useNavigate();
   const [pw1, setPw1] = useState("");
   const [pw2, setPw2] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
     setErr("");
+
     if (pw1.length < 6) return setErr("Password must be at least 6 characters.");
     if (pw1 !== pw2) return setErr("Passwords do not match.");
+
+    setLoading(true);
     try {
-      // 👇 DIFFERENCE: endpoint is /api/employees/reset
       const r = await fetch(`${api}/api/employees/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,39 +33,45 @@ export default function StaffReset() {
       setTimeout(() => nav("/staff/login"), 1200);
     } catch (e) {
       setErr(e.message || "Failed");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
     <div className="page card-page">
       <div className="card-page-inner">
-        <h2 className="card-page-title">Set New Password</h2>
+        <h2 className="card-page-title">Staff — Set New Password</h2>
         <div className="card card-page-body">
           {ok ? (
-            <div className="note">Password updated! Redirecting to login…</div>
+            <div className="note">Password updated! Redirecting to staff login…</div>
           ) : (
             <form onSubmit={submit} className="two-col" style={{ gap: 10 }}>
               <div className="span-2">
-                <label>New password</label>
+                <label htmlFor="staff-new-password">New password</label>
                 <input
+                  id="staff-new-password"
                   type="password"
                   value={pw1}
+                  minLength={6}
                   onChange={(e) => setPw1(e.target.value)}
                   required
                 />
               </div>
               <div className="span-2">
-                <label>Confirm password</label>
+                <label htmlFor="staff-confirm-password">Confirm password</label>
                 <input
+                  id="staff-confirm-password"
                   type="password"
                   value={pw2}
+                  minLength={6}
                   onChange={(e) => setPw2(e.target.value)}
                   required
                 />
               </div>
               <div className="span-2">
-                <button className="btn btn-primary" type="submit">
-                  Update password
+                <button className="btn btn-primary" type="submit" disabled={loading}>
+                  {loading ? "Updating…" : "Update password"}
                 </button>
               </div>
               {err && <div className="error span-2">{err}</div>}
