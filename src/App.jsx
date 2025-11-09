@@ -928,7 +928,7 @@ export default function App() {
         <Route
           path="/events/:id"
           element={
-            <ProtectedRoute roles={["admin", "ops_manager"]}>
+            <ProtectedRoute roles={["admin", "ops_manager", "coordinator"]}>
               <EventView />
             </ProtectedRoute>
           }
