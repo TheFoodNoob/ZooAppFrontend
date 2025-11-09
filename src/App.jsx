@@ -912,7 +912,7 @@ export default function App() {
         <Route
           path="/events"
           element={
-            <ProtectedRoute roles={["admin", "ops_manager"]}>
+            <ProtectedRoute roles={["admin", "ops_manager","coordinator"]}>
               <Events />
             </ProtectedRoute>
           }

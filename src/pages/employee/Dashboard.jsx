@@ -27,6 +27,9 @@ export default function Dashboard() {
       case "gate_agent":
         navigate("/gate", { replace: true });
         break;
+      case "coordinator":
+        navigate("/coord", { replace: true });
+        break;
       default:
         navigate("/lost", { replace: true });
     }
