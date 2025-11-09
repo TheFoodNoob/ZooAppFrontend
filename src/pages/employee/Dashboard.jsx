@@ -1,8 +1,9 @@
 import React from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 export default function Dashboard() {
   const { user } = useAuth();
+  const {navigate} = useNavigate();
 
   return (
     <div className="page">
@@ -16,7 +17,7 @@ export default function Dashboard() {
           {user.role === "admin" && (
             <ul>
               <li>
-                <Link to="/employees" className="">view employees</Link>
+                <Link to="/employees/admin" className="">view employees</Link>
               </li>
               <li> 
                 <Link to="/reports" className="">run reports</Link>
@@ -32,7 +33,16 @@ export default function Dashboard() {
           {user.role === "keeper" && (
             <ul>
               <li><Link to="/keeper">my tasks</Link></li>
-              <li><Link to="/animals">animal directory</Link></li>
+              <li><Link to="/animalStats">animal directory</Link></li>
+              <li><Link to = "/feedings">view feeding logs</Link></li>
+            </ul>
+          )}
+          {user.role === "security" && (
+            <ul>
+              <li><Link to="/security">my tasks</Link></li>
+              <li><Link to="/employees/security">view personel</Link></li>
+              
+              <li><Link to = "/..">view security logs</Link></li>
             </ul>
           )}
         </div>

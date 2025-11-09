@@ -1,87 +1,68 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../../api"; // Keeps using your base URL (e.g., http://localhost:4000)
+import { api } from "../../api";
+import { useAuth } from "../../context/AuthContext";
+
+//TODO:: Need to be able to edit/add/delete animals similar to how employee currently is
 
 export default function Animals() {
-  const [list, setList] = useState([]);
-  const [form, setForm] = useState({
-    species_id: "",
-    exhibit_id: "",
-    animal_name: "",
-    sex: "M",
-  });
+  const [list, setList] = useState([]);         // all animals from API
+  const [filtered, setFiltered] = useState([]); // filtered list to display
+  const [search, setSearch] = useState("");     // search query
   const [msg, setMsg] = useState("");
+  const { token } = useAuth();
 
   useEffect(() => {
     load();
   }, []);
 
+  // Fetch animal data from backend
   const load = async () => {
     try {
-      const res = await fetch(`${api}/animals`);
+      const res = await fetch(`${api}/api/animals`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!res.ok) throw new Error("Failed to load animals");
+
       const data = await res.json();
       setList(data);
+      setFiltered(data); // initialize filtered list
     } catch (err) {
       setMsg(err.message || "Error loading animals");
     }
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${api}/animals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          species_id: +form.species_id,
-          exhibit_id: +form.exhibit_id,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Save failed");
-      }
-
-      setMsg("Animal saved");
-      setForm({ species_id: "", exhibit_id: "", animal_name: "", sex: "M" });
-      await load();
-    } catch (err) {
-      setMsg(err.message || "Save failed");
-    }
-  };
+  // Search filtering logic
+  useEffect(() => {
+    const q = search.toLowerCase();
+    const results = list.filter(
+      (a) =>
+        a.animal_name.toLowerCase().includes(q) ||
+        a.species.toLowerCase().includes(q) ||
+        a.exhibit.toLowerCase().includes(q) ||
+        a.animal_status.toLowerCase().includes(q)
+    );
+    setFiltered(results);
+  }, [search, list]);
 
   return (
     <div className="page">
-      <h2>Animals</h2>
+      <h2>Animal Directory</h2>
       {msg && <p>{msg}</p>}
-      <form onSubmit={submit} className="card">
-        <input
-          placeholder="Species ID"
-          value={form.species_id}
-          onChange={(e) => setForm({ ...form, species_id: e.target.value })}
-        />
-        <input
-          placeholder="Exhibit ID"
-          value={form.exhibit_id}
-          onChange={(e) => setForm({ ...form, exhibit_id: e.target.value })}
-        />
-        <input
-          placeholder="Animal name"
-          value={form.animal_name}
-          onChange={(e) => setForm({ ...form, animal_name: e.target.value })}
-        />
-        <select
-          value={form.sex}
-          onChange={(e) => setForm({ ...form, sex: e.target.value })}
-        >
-          <option>M</option>
-          <option>F</option>
-        </select>
-        <button>Add Animal</button>
-      </form>
 
+      {/* Search Bar */}
+      <input
+        type="text"
+        placeholder="Search by name, species, or exhibit..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-bar"
+      />
+
+      {/* Table of Animals */}
       <table className="table">
         <thead>
           <tr>
@@ -92,14 +73,20 @@ export default function Animals() {
           </tr>
         </thead>
         <tbody>
-          {list.map((a) => (
-            <tr key={a.animal_id}>
-              <td>{a.animal_name}</td>
-              <td>{a.species}</td>
-              <td>{a.exhibit}</td>
-              <td>{a.animal_status}</td>
+          {filtered.length > 0 ? (
+            filtered.map((a) => (
+              <tr key={a.animal_id}>
+                <td>{a.animal_name}</td>
+                <td>{a.species}</td>
+                <td>{a.exhibit}</td>
+                <td>{a.animal_status}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4">No animals found</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>

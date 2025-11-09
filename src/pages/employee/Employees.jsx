@@ -208,16 +208,26 @@ export default function Employees() {
   }
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return list;
-    return list.filter((r) =>
-      `${r.first_name} ${r.last_name}`.toLowerCase().includes(s) ||
-      String(r.email).toLowerCase().includes(s) ||
-      String(r.role).toLowerCase().includes(s) ||
-      String(r.department_id ?? "").toLowerCase().includes(s) ||
-      String(r.phone ?? "").toLowerCase().includes(s)
+  const s = q.trim().toLowerCase();
+  if (!s) return list;
+
+  return list.filter((r) => {
+    const fullName = `${r.first_name} ${r.last_name}`.toLowerCase();
+    const email = String(r.email).toLowerCase();
+    const department = String(r.department_id ?? "").toLowerCase();
+    const phone = String(r.phone ?? "").toLowerCase();
+    const role = String(r.role).toLowerCase();
+
+    return (
+      fullName.includes(s) ||
+      email.includes(s) ||
+      phone.includes(s) ||
+      department == s ||
+      role === s // exact match for role
     );
-  }, [q, list]);
+  });
+}, [q, list]);
+
 
   const bind = (name) => ({
     value: form[name],
