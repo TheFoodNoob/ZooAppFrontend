@@ -18,7 +18,7 @@ import CartWidget from "./components/CartWidget.jsx";
 // Public
 import Home from "./pages/ZooHomePage.jsx";
 import CustomerLogin from "./pages/customer/CustomerLogin.jsx";
-import CustomerRegister from "./pages/customer/Register.jsx"; // NEW
+import CustomerRegister from "./pages/customer/Register.jsx";
 import StaffLogin from "./pages/employee/StaffLogin";
 import Lost from "./pages/Lost.jsx";
 import CAnimals from "./pages/customer/Animals.jsx";
@@ -32,13 +32,14 @@ import Forgot from "./pages/customer/Forgot.jsx";
 import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
+
+/* Used for both customer email-verify and the public order OTP verify step */
 import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
 import VerifySent from "./pages/customer/VerifySent.jsx";
 import VerifyBanner from "./components/VerifyBanner.jsx";
 import Checkout from "./pages/customer/Checkout.jsx";
 import OrderReceipt from "./pages/customer/OrderReceipt.jsx";
 import OrderLookup from "./pages/customer/OrderLookup.jsx";
-
 
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
@@ -497,7 +498,7 @@ function Forbidden() {
   );
 }
 
-/* ---------- Top Nav (removed “Staff” text link) ---------- */
+/* ---------- Top Nav ---------- */
 function Nav() {
   const { user, logout } = useAuth();
   const [open, setOpen] = React.useState(false);
@@ -546,9 +547,10 @@ function Nav() {
           </NavLink>
         </li>
       )}
-      {(["admin","ops_manager","gate_agent"].includes(user.role)) && (
-      <li>
-          <NavLink to="/orders" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+      {["admin","ops_manager","gate_agent"].includes(user.role) && (
+        <li>
+          {/* Staff Orders now lives at /staff/orders */}
+          <NavLink to="/staff/orders" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
             Orders
           </NavLink>
         </li>
@@ -668,16 +670,11 @@ function SiteFooter() {
   );
 }
 
-// src/components/ProtectedRoute.jsx
-
 /**
- * Wrap any route that needs auth:
- *   <ProtectedRoute roles={['admin','keeper']}><StaffPage/></ProtectedRoute>
- * If `roles` is omitted, it only checks that a user is logged in.
+ * Role page wrapper: /employees/:role
  */
-
 function ProtectedRolePage() {
-  const { role } = useParams(); // get role from URL
+  const { role } = useParams();
   return (
     <ProtectedRoute roles={["admin", role]}>
       <RolePage role={role} />
@@ -690,12 +687,29 @@ export default function App() {
   return (
     <BrowserRouter>
       <Nav />
-      <VerifyBanner />   {/* 👈 shows only for logged-in, unverified customers */}
+      <VerifyBanner />
       <Routes>
-        {/* Public */}
+        {/* ---------- PUBLIC (customer) ---------- */}
         <Route path="/" element={<Home />} />
+        <Route path="/visit" element={<Visit />} />
+        <Route path="/visit/:id" element={<EventDetails />} />
+        <Route path="/tickets" element={<CTickets />} />
+        <Route path="/animals" element={<CAnimals />} />
+        <Route path="/Exhibits" element={<ExhibitsPage />} />
+        <Route path="/request" element={<RequestReceived />} />
+        <Route path="scheduleEvents" element={<ZooScheduler />} />
+
+        {/* Checkout & order self-service (no staff login) */}
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders" element={<OrderLookup />} />
+        <Route path="/orders/verify" element={<VerifyFromToken />} />
+        <Route path="/order/:id" element={<OrderReceipt />} />
+
+        {/* Password/verify (public) */}
         <Route path="/forgot" element={<Forgot />} />
         <Route path="/reset/:token" element={<Reset />} />
+        <Route path="/verify/:token" element={<VerifyFromToken />} />
+        <Route path="/verify-sent" element={<VerifySent />} />
         <Route path="/staff/forgot" element={<StaffForgot />} />
         <Route path="/staff/reset/:token" element={<StaffReset />} />
 
@@ -716,8 +730,6 @@ export default function App() {
             </RedirectIfAuthed>
           }
         />
-        <Route path="/verify/:token" element={<VerifyFromToken />} />
-        <Route path="/verify-sent" element={<VerifySent />} />
         <Route
           path="/staff/login"
           element={
@@ -726,28 +738,8 @@ export default function App() {
             </RedirectIfAuthed>
           }
         />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/order/:id" element={<OrderReceipt />} />
-        <Route
-          path="/orders"
-          element={
-            <ProtectedRoute roles={["admin","ops_manager","gate_agent"]}>
-              <Orders />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/orders" element={<OrderLookup />} />
 
-
-        <Route path="/animals" element={<CAnimals />} />
-        <Route path="/tickets" element={<CTickets />} />
-        <Route path="/Exhibits" element={<ExhibitsPage />} />
-        <Route path="/request" element={<RequestReceived />} />
-        <Route path="scheduleEvents" element={<ZooScheduler />} />
-        <Route path="/visit" element={<Visit />} />
-        <Route path="/visit/:id" element={<EventDetails />} />
-
-        {/* Protected (any employee) */}
+        {/* ---------- STAFF / PROTECTED ---------- */}
         <Route
           path="/dashboard"
           element={
@@ -774,7 +766,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/vet"
           element={
@@ -823,11 +814,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/employees/:role"
-          element={<ProtectedRolePage />}
-        />
-        
+        <Route path="/employees/:role" element={<ProtectedRolePage />} />
 
         {/* Admin hub */}
         <Route
@@ -877,7 +864,7 @@ export default function App() {
           }
         />
         {/* Feedings (employee) */}
-         <Route
+        <Route
           path="/feedings"
           element={
             <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
@@ -885,6 +872,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         {/* Reports */}
         <Route
           path="/reports"
@@ -925,6 +913,16 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin", "ops_manager"]}>
               <EventEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff Orders moved to /staff/orders to avoid clashing with public /orders */}
+        <Route
+          path="/staff/orders"
+          element={
+            <ProtectedRoute roles={["admin","ops_manager","gate_agent"]}>
+              <Orders />
             </ProtectedRoute>
           }
         />

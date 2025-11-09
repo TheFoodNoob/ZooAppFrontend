@@ -1,96 +1,106 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 
-const AuthContext = createContext(null);
+const AuthCtx = createContext(null);
 
+// Named hook export (works with: import { useAuth } from "...")
+export function useAuth() {
+  return useContext(AuthCtx);
+}
+
+// Named provider export (works with: import { AuthProvider } from "...")
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("authUser") || "null"); } catch { return null; }
-  });
-  const [token, setToken] = useState(() => localStorage.getItem("authToken") || null);
-  const [loading] = useState(false); // reserved if you add a “restore session” flow later
+  const [token, setToken]   = useState(() => localStorage.getItem("authToken") || "");
+  const [user, setUser]     = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  // Authorized fetch helper
+  const authFetch = useCallback(
+    async (url, opts = {}) => {
+      const headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
+      return fetch(url, { ...opts, headers });
+    },
+    [token]
+  );
+
+  // Load current employee when token changes
   useEffect(() => {
-    user ? localStorage.setItem("authUser", JSON.stringify(user)) : localStorage.removeItem("authUser");
-  }, [user]);
-
-  useEffect(() => {
-    token ? localStorage.setItem("authToken", token) : localStorage.removeItem("authToken");
-  }, [token]);
-
-  const loginEmployee = async (email, password) => {
-    try {
-      const r = await fetch(`${api}/api/employees/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        return { ok: false, error: err.error || "Login failed" };
+    let cancelled = false;
+    (async () => {
+      if (!token) {
+        setUser(null);
+        return;
       }
-      const data = await r.json();
-      setUser({ ...data.user, role: data.user.role || "employee" });
-      setToken(data.token);
-      return { ok: true, role: "employee" };
-    } catch {
-      return { ok: false, error: "Network error" };
-    }
-  };
+      try {
+        const r = await authFetch(`${api}/api/employee/me`);
+        if (!r.ok) throw new Error("Auth check failed");
+        const me = await r.json();
+        if (!cancelled) setUser(me || null);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setToken("");
+          localStorage.removeItem("authToken");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, authFetch]);
 
-  const loginCustomer = async (email, password) => {
+  // STAFF login → /api/auth/login (NOT /api/employees/login)
+  async function loginEmployee(email, password) {
     try {
+      setLoading(true);
       const r = await fetch(`${api}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        return { ok: false, error: err.error || "Login failed" };
-      }
-      const data = await r.json();
-      setUser({ ...data.user, role: "customer" });
-      setToken(data.token);
-      return { ok: true, role: "customer" };
-    } catch {
-      return { ok: false, error: "Network error" };
-    }
-  };
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) return { ok: false, error: j.error || "Login failed" };
 
-  // Register but do not auto-login; the Register page redirects to /login on success
-  const registerCustomer = async ({ first_name, last_name, email, password, phone }) => {
-    try {
-      const r = await fetch(`${api}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name,
-          last_name,
-          email,
-          password,
-          ...(phone ? { phone } : {}),
-        }),
+      const tok = j.token;
+      setToken(tok);
+      localStorage.setItem("authToken", tok);
+
+      // fetch staff profile
+      const meRes = await fetch(`${api}/api/employee/me`, {
+        headers: { Authorization: `Bearer ${tok}` },
       });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        return { ok: false, error: err.error || "Register failed" };
-      }
+      const me = await meRes.json().catch(() => ({}));
+      setUser(me || null);
+
+      window.dispatchEvent(new Event("auth:changed"));
       return { ok: true };
-    } catch {
-      return { ok: false, error: "Network error" };
+    } catch (e) {
+      return { ok: false, error: e.message || "Login failed" };
+    } finally {
+      setLoading(false);
     }
+  }
+
+  function logout() {
+    setUser(null);
+    setToken("");
+    localStorage.removeItem("authToken");
+    window.dispatchEvent(new Event("auth:changed"));
+  }
+
+  const value = {
+    token,
+    user,
+    loading,
+    setToken,         // kept for compatibility
+    setUser,          // kept for compatibility
+    authFetch,
+    loginEmployee,
+    logout,
   };
 
-  const logout = () => { setUser(null); setToken(null); };
-
-  const value = useMemo(
-    () => ({ user, token, loading, loginEmployee, loginCustomer, registerCustomer, logout }),
-    [user, token, loading]
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
-export function useAuth() { return useContext(AuthContext); }
+// Also export default for projects that import default:
+//   import AuthProvider from "...";
+export default AuthProvider;
