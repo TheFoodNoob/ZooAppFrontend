@@ -50,12 +50,8 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
-<<<<<<< HEAD
 import Feedings from "./pages/employee/Feedings.jsx";
-=======
-import Feedings from "./pages/employee/Feeding.jsx";
 import Orders from "./pages/employee/Orders.jsx";
->>>>>>> 3d81be2bab9f2903f3f2571dd664c704f324e893
 
 // Role landing pages
 import Vet from "./pages/employee/Vet.jsx";
