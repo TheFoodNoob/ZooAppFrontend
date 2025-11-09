@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../../api"; // your base URL
 import { useAuth } from "../../context/AuthContext";
 
+
 export default function Feedings() {
   const { token } = useAuth();
   const [feedings, setFeedings] = useState([]);
@@ -20,6 +21,7 @@ export default function Feedings() {
       const res = await fetch(`${api}/api/feedings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log(token);
       if (!res.ok) throw new Error("Failed to load feedings");
       const data = await res.json();
       setFeedings(data);
