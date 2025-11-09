@@ -1,6 +1,8 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Vet() {
+  
   return (
     <div className="page" style={{ padding: "24px 16px" }}>
       <div className="container" style={{ maxWidth: 1120, margin: "0 auto" }}>
@@ -30,6 +32,7 @@ export default function Vet() {
           </div>
         </div>
       </div>
+      <Link to = "/vetvisit"><button className="btn">View all vet visits</button></Link>
     </div>
   );
 }

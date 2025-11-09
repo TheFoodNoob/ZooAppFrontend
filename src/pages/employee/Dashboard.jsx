@@ -1,9 +1,36 @@
-import React from "react";
+import React, {useEffect} from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Link, useNavigate } from "react-router-dom";
 export default function Dashboard() {
   const { user } = useAuth();
-  const {navigate} = useNavigate();
+  const navigate = useNavigate(); // <- just call useNavigate(), not destructure
+
+  // Redirect based on role
+  useEffect(() => {
+    if (!user) return; // don't redirect if user info not loaded yet
+
+    switch (user.role) {
+      case "admin":
+        break;
+      case "keeper":
+        navigate("/keeper", { replace: true });
+        break;
+      case "security":
+        navigate("/security", { replace: true });
+        break;
+      case "vet":
+        navigate("/vet", { replace: true });
+        break;
+      case "retail":
+        navigate("/retail", { replace: true });
+        break;
+      case "gate_agent":
+        navigate("/gate", { replace: true });
+        break;
+      default:
+        navigate("/lost", { replace: true });
+    }
+  }, [user, navigate]);
 
   return (
     <div className="page">
@@ -28,21 +55,9 @@ export default function Dashboard() {
               <li> 
                 <Link to="/animalStats" className="">search animals</Link>
               </li>
-            </ul>
-          )}
-          {user.role === "keeper" && (
-            <ul>
-              <li><Link to="/keeper">my tasks</Link></li>
-              <li><Link to="/animalStats">animal directory</Link></li>
-              <li><Link to = "/feedings">view feeding logs</Link></li>
-            </ul>
-          )}
-          {user.role === "security" && (
-            <ul>
-              <li><Link to="/security">my tasks</Link></li>
-              <li><Link to="/employees/security">view personel</Link></li>
-              
-              <li><Link to = "/..">view security logs</Link></li>
+              <li>
+                <Link to = "/reports/tickets">view ticket statistics</Link>
+              </li>
             </ul>
           )}
         </div>

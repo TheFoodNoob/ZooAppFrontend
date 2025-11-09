@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Security() {
   return (
@@ -29,6 +30,11 @@ export default function Security() {
             </section>
           </div>
         </div>
+      </div>
+      <div className="panel">
+        <ul>
+        <li><Link to="/employees/security">view personel</Link></li>            
+        </ul>
       </div>
     </div>
   );
