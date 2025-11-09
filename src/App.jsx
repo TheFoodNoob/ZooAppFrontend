@@ -6,6 +6,7 @@ import {
   Navigate,
   NavLink,
   useLocation,
+  useParams,
 } from "react-router-dom";
 import { api } from "./api";
 import { useAuth } from "./context/AuthContext.jsx";
@@ -50,6 +51,7 @@ import GateAgent from "./pages/employee/GateAgent.jsx";
 import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
+import RolePage from "./pages/employee/EmployeeByRole.jsx";
 
 /* ---------- Any-employee roles helper ---------- */
 const ANY_EMP = [
@@ -650,6 +652,23 @@ function SiteFooter() {
   );
 }
 
+// src/components/ProtectedRoute.jsx
+
+/**
+ * Wrap any route that needs auth:
+ *   <ProtectedRoute roles={['admin','keeper']}><StaffPage/></ProtectedRoute>
+ * If `roles` is omitted, it only checks that a user is logged in.
+ */
+
+function ProtectedRolePage() {
+  const { role } = useParams(); // get role from URL
+  return (
+    <ProtectedRoute roles={["admin", role]}>
+      <RolePage role={role} />
+    </ProtectedRoute>
+  );
+}
+
 /* ---------- App Routes ---------- */
 export default function App() {
   return (
@@ -773,6 +792,11 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/employees/:role"
+          element={<ProtectedRolePage />}
+        />
+        
 
         {/* Admin hub */}
         <Route
