@@ -158,7 +158,9 @@ export default function Register() {
           <button className="btn btn-primary" type="submit" disabled={submitting}>
             {submitting ? "Creating…" : "Create account"}
           </button>
-          <Link to="/login" className="btn">Back to login</Link>
+          navigate(`/verify-sent?email=${encodeURIComponent(form.email)}`);
+
+          {/* <Link to="/login" className="btn">Back to login</Link> */}
         </div>
       </form>
     </div>

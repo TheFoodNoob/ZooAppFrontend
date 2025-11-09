@@ -1,5 +1,6 @@
 // src/pages/customer/Tickets.jsx
 import React from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../../api";
 
 const toUSD = (cents) =>
@@ -26,6 +27,7 @@ const offsetFor = (name = "") => {
   if (n.includes("adult"))  return { x: "-8px",  y: "0px", bleed: "16px" };
   return { x: "0px", y: "0px", bleed: "0px" };
 };
+
 function blurbFor(name = "") {
   const n = String(name).toLowerCase();
   if (n.includes("infant")) return "Under 3 (free)";
@@ -34,12 +36,12 @@ function blurbFor(name = "") {
   if (n.includes("adult")) return "Ages 13–64";
   return "";
 }
+
 export default function Tickets() {
+  const navigate = useNavigate();
+
   const [types, setTypes] = React.useState([]);
   const [qty, setQty] = React.useState({});
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [visitDate, setVisitDate] = React.useState("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -66,7 +68,8 @@ export default function Tickets() {
           price_cents: Number(t.price_cents || 0),
           blurb: t.blurb ?? blurbFor(t.name),
         }));
-        localStorage.setItem("ticketTypes", JSON.stringify(minimal));
+        // store catalog for this tab only
+        sessionStorage.setItem("ticketTypes", JSON.stringify(minimal));
         window.dispatchEvent(new Event("cart:changed"));
       }
     })();
@@ -75,14 +78,15 @@ export default function Tickets() {
 
   React.useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("cartQty") || "{}");
+      // read per-tab cart state
+      const saved = JSON.parse(sessionStorage.getItem("cartQty") || "{}");
       if (saved && typeof saved === "object") setQty(saved);
     } catch {}
   }, []);
 
   const setAndPersistQty = React.useCallback((next) => {
     setQty(next);
-    localStorage.setItem("cartQty", JSON.stringify(next));
+    sessionStorage.setItem("cartQty", JSON.stringify(next));
     window.dispatchEvent(new Event("cart:changed"));
   }, []);
 
@@ -119,7 +123,7 @@ export default function Tickets() {
 
   const clearAll = () => {
     setQty({});
-    localStorage.setItem("cartQty", "{}");
+    sessionStorage.setItem("cartQty", "{}");
     window.dispatchEvent(new Event("cart:changed"));
   };
 
@@ -135,10 +139,7 @@ export default function Tickets() {
             const { x, y, bleed } = offsetFor(t.name);
 
             return (
-              <article
-                key={id}
-                className={`ticket-card${q > 0 ? " is-selected" : ""}`}
-              >
+              <article key={id} className={`ticket-card${q > 0 ? " is-selected" : ""}`}>
                 {/* LEFT: details */}
                 <div className="ticket-card__main" style={{ display: "grid", gap: 8 }}>
                   <div>
@@ -183,7 +184,7 @@ export default function Tickets() {
           })}
         </div>
 
-        {/* Summary + Info */}
+        {/* Summary + Next step */}
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr", marginTop: 14 }}>
           <div className="panel" style={{ background: "#fff8e1" }}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>Summary</div>
@@ -220,27 +221,21 @@ export default function Tickets() {
           </div>
 
           <div className="panel" style={{ background: "#fff8e1" }}>
-            <div style={{ fontWeight: 800, marginBottom: 8 }}>Your info</div>
-            <div className="two-col" style={{ gap: 8 }}>
-              <div>
-                <label>Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
-              </div>
-              <div>
-                <label>Email</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.com" />
-              </div>
-              <div className="span-2">
-                <label>Visit date</label>
-                <input type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} />
-              </div>
-            </div>
-
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Next step</div>
+            <div className="note">You’ll enter contact info and pick a visit date on the next page.</div>
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn" type="button" onClick={clearAll}>Clear</button>
-              <button className="btn btn-primary" type="button" disabled={items === 0} onClick={() => alert("Checkout flow TBD")}>
-                Checkout
-              </button>
+              <Link
+                to={items === 0 ? "#" : "/checkout"}
+                className={`btn btn-primary${items === 0 ? " disabled" : ""}`}
+                aria-disabled={items === 0}
+                onClick={(e) => { if (items === 0) e.preventDefault(); }}
+              >
+                Go to checkout
+              </Link>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 13 }}>
+              <a href="/orders">Find my order / Request a refund</a>
             </div>
           </div>
         </div>

@@ -68,6 +68,11 @@ export const endpoints = {
   reports: {
     summary: () => url("api/reports/summary"),
   },
+  verify: {
+    start: () => url("api/auth/verify/start"),
+    confirm: () => url("api/auth/verify/confirm"),
+    status: () => url("api/auth/verify/status"),
+  },
 };
 
 // ---------------------------
