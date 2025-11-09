@@ -43,7 +43,7 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
-import Feedings from "./pages/employee/Feeding.jsx";
+import Feedings from "./pages/employee/Feedings.jsx";
 
 // Role landing pages
 import Vet from "./pages/employee/Vet.jsx";
