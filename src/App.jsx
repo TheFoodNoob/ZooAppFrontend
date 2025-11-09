@@ -32,6 +32,13 @@ import Forgot from "./pages/customer/Forgot.jsx";
 import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
+import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
+import VerifySent from "./pages/customer/VerifySent.jsx";
+import VerifyBanner from "./components/VerifyBanner.jsx";
+import Checkout from "./pages/customer/Checkout.jsx";
+import OrderReceipt from "./pages/customer/OrderReceipt.jsx";
+import OrderLookup from "./pages/customer/OrderLookup.jsx";
+
 
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
@@ -43,7 +50,12 @@ import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
+<<<<<<< HEAD
 import Feedings from "./pages/employee/Feedings.jsx";
+=======
+import Feedings from "./pages/employee/Feeding.jsx";
+import Orders from "./pages/employee/Orders.jsx";
+>>>>>>> 3d81be2bab9f2903f3f2571dd664c704f324e893
 
 // Role landing pages
 import Vet from "./pages/employee/Vet.jsx";
@@ -538,6 +550,14 @@ function Nav() {
           </NavLink>
         </li>
       )}
+      {(["admin","ops_manager","gate_agent"].includes(user.role)) && (
+      <li>
+          <NavLink to="/orders" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+            Orders
+          </NavLink>
+        </li>
+      )}
+
       <li>
         <NavLink to="/role" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
           My Role
@@ -674,6 +694,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Nav />
+      <VerifyBanner />   {/* 👈 shows only for logged-in, unverified customers */}
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -699,6 +720,8 @@ export default function App() {
             </RedirectIfAuthed>
           }
         />
+        <Route path="/verify/:token" element={<VerifyFromToken />} />
+        <Route path="/verify-sent" element={<VerifySent />} />
         <Route
           path="/staff/login"
           element={
@@ -707,6 +730,18 @@ export default function App() {
             </RedirectIfAuthed>
           }
         />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order/:id" element={<OrderReceipt />} />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute roles={["admin","ops_manager","gate_agent"]}>
+              <Orders />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/orders" element={<OrderLookup />} />
+
 
         <Route path="/animals" element={<CAnimals />} />
         <Route path="/tickets" element={<CTickets />} />

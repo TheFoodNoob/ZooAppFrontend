@@ -95,6 +95,8 @@ export default function ZooHomePage() {
                   Plan Your Visit
                 </a>
               </div>
+              
+
             </div>
             {/* Right: image carousel (new) */}
             <div
@@ -223,6 +225,7 @@ export default function ZooHomePage() {
                 Plan Your Visit
               </a>
             </div>
+            
             <div className="panel">
               <h3>Support the Zoo</h3>
               <p style={{ color: "var(--ink-2)" }}>
@@ -257,6 +260,9 @@ export default function ZooHomePage() {
               </div>
               <div>
                 <a href="/visit">Plan Your Visit</a>
+              </div>
+              <div>
+                <a href="/orders">Find my order / Refunds</a>
               </div>
               <div>
                 <a href="/Exhibits">Exhibits</a>
