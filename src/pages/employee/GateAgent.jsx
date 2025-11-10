@@ -1,5 +1,5 @@
 import React from "react";
-
+import { Link } from "react-router-dom";
 export default function GateAgent() {
   return (
     <div className="page" style={{ padding: "24px 16px" }}>
@@ -30,6 +30,7 @@ export default function GateAgent() {
           </div>
         </div>
       </div>
+      <Link to = "/reports/tickets"><button className="btn">view ticket statistics</button></Link>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Coordinator() {
   return (
@@ -30,6 +31,7 @@ export default function Coordinator() {
           </div>
         </div>
       </div>
+      <Link to= "/events" ><button className="btn">Manage events</button></Link>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   NavLink,
   useLocation,
   useParams,
+  Link,
 } from "react-router-dom";
 import { api } from "./api";
 import { useAuth } from "./context/AuthContext.jsx";
@@ -61,6 +62,8 @@ import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 import RolePage from "./pages/employee/EmployeeByRole.jsx";
+import VetVisitsPage from "./pages/employee/VetVisit.jsx";
+import TicketStats from "./pages/employee/Tickets.jsx";
 
 /* ---------- Any-employee roles helper ---------- */
 const ANY_EMP = [
@@ -348,6 +351,12 @@ function KeeperDash() {
           </table>
         </div>
       )}
+      <div>
+          <ul>
+              <li><Link to="/animalStats">animal directory</Link></li>
+              <li><Link to = "/feedings">view feeding logs</Link></li>
+          </ul>
+      </div>
     </CardPage>
   );
 }
@@ -863,12 +872,22 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Feedings (employee) */}
+
+        {/* Feedings (keeper) */}
         <Route
           path="/feedings"
           element={
             <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
               <Feedings />
+            </ProtectedRoute>
+          }
+        />
+        {/* VetVisit (keeper)*/}
+        <Route
+          path="/vetvisit"
+          element={
+            <ProtectedRoute roles={["admin","vet", "keeper"]}>
+              <VetVisitsPage />
             </ProtectedRoute>
           }
         />
@@ -882,12 +901,18 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/reports/tickets"
+          element={
+            <ProtectedRoute roles={["admin","op_manager","gate_agent"]}>
+              <TicketStats/>
+            </ProtectedRoute>
+          }/>
 
         {/* Events */}
         <Route
           path="/events"
           element={
-            <ProtectedRoute roles={["admin", "ops_manager"]}>
+            <ProtectedRoute roles={["admin", "ops_manager","coordinator"]}>
               <Events />
             </ProtectedRoute>
           }
@@ -903,7 +928,7 @@ export default function App() {
         <Route
           path="/events/:id"
           element={
-            <ProtectedRoute roles={["admin", "ops_manager"]}>
+            <ProtectedRoute roles={["admin", "ops_manager", "coordinator"]}>
               <EventView />
             </ProtectedRoute>
           }
