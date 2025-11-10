@@ -38,6 +38,7 @@ export default function OrderLookup() {
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [working, setWorking] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false); // NEW: 2-click confirm
 
   /* ---- step 1: request code ---- */
   async function sendCode(e) {
@@ -47,6 +48,7 @@ export default function OrderLookup() {
     setOrder(null);
     setToken("");
     setStage("lookup");
+    setConfirming(false);
 
     if (!orderId || !email) return setErr("Please enter your order # and email.");
 
@@ -73,6 +75,7 @@ export default function OrderLookup() {
     e?.preventDefault?.();
     setErr("");
     setNote("");
+    setConfirming(false);
     if (!/^\d{6}$/.test(code)) return setErr("Please enter the 6-digit code.");
 
     setBusy(true);
@@ -114,7 +117,13 @@ export default function OrderLookup() {
     if (!isRefundEligible(order.visit_date)) {
       return setNote("The return window has closed (refunds allowed until the day before your visit).");
     }
-    if (!window.confirm(`Request a refund for order #${order.order_id}?`)) return;
+
+    // First click = arm confirmation, second click = execute
+    if (!confirming) {
+      setConfirming(true);
+      setNote("Click “Confirm refund” to finalize your refund.");
+      return;
+    }
 
     setWorking(true);
     setErr("");
@@ -139,6 +148,7 @@ export default function OrderLookup() {
         refunded_at: j?.refund?.refunded_at ?? new Date().toISOString(),
       };
       setOrder(updated);
+      setConfirming(false);
       setNote(`Refund processed for ${toUSD(updated.refund_cents ?? updated.total_cents)}. A confirmation email has been sent.`);
     } catch (e) {
       setErr(e.message || "Refund failed");
@@ -333,9 +343,36 @@ export default function OrderLookup() {
                 {refunded ? (
                   <div className="note">This order has already been refunded.</div>
                 ) : eligible ? (
-                  <button className="btn" type="button" onClick={requestRefund} disabled={working}>
-                    {working ? "Requesting…" : "Request refund"}
-                  </button>
+                  confirming ? (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button className="btn btn-primary" type="button" onClick={requestRefund} disabled={working}>
+                        {working ? "Processing…" : "Confirm refund"}
+                      </button>
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() => {
+                          setConfirming(false);
+                          setNote("");
+                        }}
+                        disabled={working}
+                      >
+                        Never mind
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => {
+                        setConfirming(true);
+                        setNote("Click “Confirm refund” to finalize your refund.");
+                      }}
+                      disabled={working}
+                    >
+                      Request refund
+                    </button>
+                  )
                 ) : (
                   <div className="note">
                     Returns are allowed until 11:59 PM the day before your visit.
