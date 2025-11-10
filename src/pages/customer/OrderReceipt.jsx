@@ -10,23 +10,6 @@ const toUSD = (cents) =>
     minimumFractionDigits: 2,
   });
 
-function isRefundEligible(visitDate) {
-  try {
-    const v = new Date(visitDate);
-    // last day to request is the day BEFORE the visit (local time)
-    const lastRefundDay = new Date(
-      v.getFullYear(),
-      v.getMonth(),
-      v.getDate() - 1,
-      23, 59, 59, 999
-    );
-    const now = new Date();
-    return now <= lastRefundDay;
-  } catch {
-    return false;
-  }
-}
-
 export default function OrderReceipt() {
   const { id } = useParams();
   const loc = useLocation();
@@ -35,71 +18,38 @@ export default function OrderReceipt() {
   const [note, setNote] = React.useState("");
   const [working, setWorking] = React.useState(false);
 
-  // If user refreshed (lost state), show a minimal message.
+  const token = new URLSearchParams(window.location.search).get("t");
+
   React.useEffect(() => {
-    if (order) return;
-    setErr(
-      "Order placed successfully. If you refreshed, details aren’t cached. Check your email for the receipt."
-    );
-  }, [order]);
-
-  // --- OTP helper: request OTP then exchange for a short-lived access token ---
-  async function getOrderAccessToken(order_id, email) {
-    // 1) ask server to issue OTP (dev: code is printed to server console)
-    await fetch(`${api}/api/public/orders/find`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id, email }),
-    });
-
-    // 2) prompt user for the 6-digit code
-    const code = window.prompt("Enter the 6-digit code we sent to your email:");
-    if (!code) throw new Error("No code entered");
-
-    // 3) exchange code for a short-lived token
-    const res = await fetch(`${api}/api/public/orders/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id, email, code }),
-    });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok || !j.token) throw new Error(j.error || "Verification failed");
-    return j.token;
-  }
+    if (order || !id || !token) return;
+    (async () => {
+      try {
+        const r = await fetch(`${api}/api/public/orders/${id}?t=${token}`);
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || "Load failed");
+        setOrder(j);
+      } catch (e) {
+        setErr(e.message || "Failed to load order");
+      }
+    })();
+  }, [id, token, order]);
 
   async function requestRefund() {
     if (!order) return;
-    if (!isRefundEligible(order.visit_date)) {
-      return setNote(
-        "The return window has closed (refunds allowed until the day before your visit)."
-      );
-    }
-    if (!window.confirm(`Request a refund for order #${order.order_id}?`)) return;
+    if (!window.confirm("Request a refund for this order?")) return;
 
     setWorking(true);
     setErr("");
     setNote("");
-
     try {
-      // Obtain short-lived access token for this order via OTP
-      const token = await getOrderAccessToken(order.order_id, order.buyer_email);
-
-      // Use the token to call the protected refund endpoint
-      const r = await fetch(`${api}/api/public/orders/${order.order_id}/refund`, {
+      const r = await fetch(`${api}/api/public/orders/${order.order_id}/refund?t=${token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(j.error || `Refund failed (HTTP ${r.status})`);
-      }
-
-      // reflect new status immediately
-      setOrder((o) => ({ ...(o || {}), status: "refunded" }));
-      setNote("Refund processed. You’ll receive a confirmation email shortly.");
+      if (!r.ok) throw new Error(j.error || "Refund failed");
+      setOrder((o) => ({ ...o, ...j.order }));
+      setNote(`Refund processed for ${toUSD(j.order.refund_cents)}.`);
     } catch (e) {
       setErr(e.message || "Refund failed");
     } finally {
@@ -107,91 +57,124 @@ export default function OrderReceipt() {
     }
   }
 
-  if (!order) {
+  if (!token)
     return (
       <div className="page">
         <h1>Order #{id}</h1>
-        {err && <div className="note">{err}</div>}
-        <p><Link to="/tickets">Back to tickets</Link></p>
+        <div className="error">Missing access token. Use the link from your email.</div>
+        <Link to="/tickets">Back to tickets</Link>
       </div>
     );
-  }
 
-  const eligible = isRefundEligible(order.visit_date);
-  const refunded = String(order.status).toLowerCase() === "refunded";
+  if (err)
+    return (
+      <div className="page">
+        <h1>Order #{id}</h1>
+        <div className="error">{err}</div>
+        <Link to="/tickets">Back to tickets</Link>
+      </div>
+    );
+
+  if (!order)
+    return (
+      <div className="page">
+        <h1>Order #{id}</h1>
+        <p>Loading...</p>
+      </div>
+    );
+
+  const refunded = String(order.status || "").toLowerCase() === "refunded";
 
   return (
-    <div className="page">
-      <h1>Order confirmed</h1>
-      <div className="panel" style={{ background: "#f6ffed", borderColor: "#b7eb8f" }}>
-        <div style={{ fontWeight: 800, marginBottom: 8 }}>Thanks, {order.buyer_name}!</div>
+    <div
+      className="page"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
+      <h1>Order #{order.order_id}</h1>
 
-        <div style={{ marginBottom: 8 }}>
-          Your order <strong>#{order.order_id}</strong> is{" "}
-          <strong>{order.status}</strong> for visit date <strong>{order.visit_date}</strong>.
+      <div
+        className="panel"
+        style={{
+          background: "#fff8e1",
+          maxWidth: 720,
+          width: "100%",
+          padding: "1.5rem",
+          borderRadius: 12,
+          marginTop: 12,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        {note && (
+          <div className="note" style={{ marginBottom: 8 }}>
+            {note}
+          </div>
+        )}
+
+        <p>
+          <strong>Thanks, {order.buyer_name}!</strong>
+        </p>
+
+        <p style={{ margin: "0.5rem 0" }}>
+          <strong>Status:</strong> {order.status}
+          <br />
+          <strong>Visit date:</strong> {order.visit_date}
+          <br />
+          <strong>Receipt sent to:</strong> {order.buyer_email}
+        </p>
+
+        <div style={{ marginTop: "1rem", textAlign: "left" }}>
+          <h3 style={{ marginBottom: "0.25rem" }}>Items</h3>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {order.items.map((it, i) => (
+              <li
+                key={i}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  padding: "6px 0",
+                  borderBottom: "1px dashed #eadfae",
+                }}
+              >
+                <span>
+                  {it.name} × {it.quantity}
+                </span>
+                <span>{toUSD(it.line_total_cents)}</span>
+              </li>
+            ))}
+          </ul>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              marginTop: 8,
+              fontWeight: 700,
+            }}
+          >
+            <span>Total</span>
+            <span>{toUSD(order.total_cents)}</span>
+          </div>
         </div>
 
-        <div className="two-col" style={{ gap: 12 }}>
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Items</div>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {order.items.map((it, i) => (
-                <li
-                  key={i}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    padding: "6px 0",
-                    borderBottom: "1px dashed #eaeaea",
-                  }}
-                >
-                  <span>{it.name} × {it.quantity}</span>
-                  <span>{toUSD(it.line_total_cents)}</span>
-                </li>
-              ))}
-            </ul>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                fontWeight: 800,
-                marginTop: 6,
-              }}
-            >
-              <span>Total</span>
-              <span>{toUSD(order.total_cents)}</span>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Receipt sent to</div>
-            <div>{order.buyer_email}</div>
-
-            {/* Refund action */}
-            <div style={{ marginTop: 12 }}>
-              {refunded ? (
-                <div className="note">This order has been refunded.</div>
-              ) : eligible ? (
-                <button className="btn" type="button" onClick={requestRefund} disabled={working}>
-                  {working ? "Requesting…" : "Request refund"}
-                </button>
-              ) : (
-                <div className="note">
-                  Returns are allowed until 11:59 PM the day before your visit.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {note && <div className="note" style={{ marginTop: 10 }}>{note}</div>}
-        {err && <div className="error" style={{ marginTop: 10 }}>{err}</div>}
-
-        <div className="row" style={{ marginTop: 12 }}>
-          <Link className="btn" to="/tickets">Buy more tickets</Link>
-          <Link className="btn btn-primary" to="/">Return home</Link>
+        <div style={{ marginTop: "1.25rem" }}>
+          <h3>Actions</h3>
+          {refunded ? (
+            <div className="note">This order has already been refunded.</div>
+          ) : (
+            <button className="btn" onClick={requestRefund} disabled={working}>
+              {working ? "Processing..." : "Request refund"}
+            </button>
+          )}
         </div>
       </div>
+
+      <Link to="/tickets" style={{ marginTop: 16 }}>
+        Back to tickets
+      </Link>
     </div>
   );
 }

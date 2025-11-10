@@ -1,18 +1,20 @@
 // src/api.js
 
-// Read the base API URL from Vite env (set in .env / .env.production).
-// Fallback: current origin (useful if backend and frontend are served together).
+// Determine base API URL (works for both local dev and Vercel production)
 const raw =
   import.meta.env?.VITE_API_BASE ||
-  (typeof window !== "undefined" ? window.location.origin : "");
+  (typeof window !== "undefined"
+    ? window.location.hostname.includes("localhost")
+      ? "http://localhost:4000" // local backend
+      : "https://zoo-app-backend-production.up.railway.app" // <-- your deployed backend
+    : "");
 
-const base = String(raw).replace(/\/+$/, ""); // strip trailing slash just in case
+const base = String(raw).replace(/\/+$/, ""); // strip trailing slash
 
-// Backward-compatible export used across the app
+// Export the base URL for all fetches
 export const api = base;
 
-// Nice helpers (optional, use if you want)
-// Build a full URL from a relative path (e.g., url("api/employees"))
+// Helper to build full URLs cleanly
 export function url(path = "") {
   const p = String(path).replace(/^\/+/, ""); // strip leading slash
   return `${base}/${p}`;
@@ -50,7 +52,6 @@ export const endpoints = {
     login: () => url("api/auth/login"),
     me: () => url("api/employee/me"),
 
-    // 👇 NEW customer auth (forgot/reset)
     forgot: () => url("api/auth/forgot"),
     reset: () => url("api/auth/reset"),
   },
@@ -68,6 +69,7 @@ export const endpoints = {
   reports: {
     summary: () => url("api/reports/summary"),
   },
+
   verify: {
     start: () => url("api/auth/verify/start"),
     confirm: () => url("api/auth/verify/confirm"),
@@ -79,7 +81,6 @@ export const endpoints = {
 //  Auth and Password Actions
 // ---------------------------
 
-// Login (Employee)
 export async function loginEmployee(email, password) {
   return jfetch("api/auth/login", {
     method: "POST",
@@ -87,7 +88,6 @@ export async function loginEmployee(email, password) {
   });
 }
 
-// Forgot Password (Customer)
 export async function forgotPassword(email) {
   return jfetch("api/auth/forgot", {
     method: "POST",
@@ -95,7 +95,6 @@ export async function forgotPassword(email) {
   });
 }
 
-// Reset Password (Customer)
 export async function resetPassword(token, password) {
   return jfetch("api/auth/reset", {
     method: "POST",
@@ -103,12 +102,10 @@ export async function resetPassword(token, password) {
   });
 }
 
-// Example: Get current employee info
 export async function getCurrentEmployee(token) {
   return jfetch("api/employee/me", {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
-// Generic export for reuse
 export { jfetch };

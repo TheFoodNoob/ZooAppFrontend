@@ -128,8 +128,11 @@ export default function Checkout() {
       // Clear cart everywhere & notify the cart widget
       clearCartEverywhere();
 
-      // Navigate to receipt with state so it renders immediately
-      nav(`/order/${j.order_id}`, { state: j, replace: true });
+      // ✅ Include the magic token in the redirect so the receipt can load anywhere
+      nav(`/order/${j.order_id}?t=${encodeURIComponent(j.lookup_token)}`, {
+        state: j,
+        replace: true,
+      });
     } catch (e) {
       setErr(e.message || "Checkout failed");
     } finally {
