@@ -14,7 +14,12 @@ function isRefundEligible(visitDate) {
   try {
     const v = new Date(visitDate);
     // Refunds allowed through 11:59:59 PM the day BEFORE the visit
-    const cutoff = new Date(v.getFullYear(), v.getMonth(), v.getDate() - 1, 23, 59, 59, 999);
+    const cutoff = new Date(
+      v.getFullYear(),
+      v.getMonth(),
+      v.getDate() - 1,
+      23, 59, 59, 999
+    );
     return new Date() <= cutoff;
   } catch {
     return false;
@@ -38,7 +43,7 @@ export default function OrderLookup() {
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [working, setWorking] = React.useState(false);
-  const [confirming, setConfirming] = React.useState(false); // NEW: 2-click confirm
+  const [confirming, setConfirming] = React.useState(false); // 2-click confirm
 
   /* ---- step 1: request code ---- */
   async function sendCode(e) {
@@ -114,7 +119,9 @@ export default function OrderLookup() {
   /* ---- step 3: request refund (token-protected) ---- */
   async function requestRefund() {
     if (!order) return;
+
     if (!isRefundEligible(order.visit_date)) {
+      setConfirming(false);
       return setNote("The return window has closed (refunds allowed until the day before your visit).");
     }
 
@@ -137,7 +144,23 @@ export default function OrderLookup() {
         },
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "Refund failed");
+
+      if (!r.ok) {
+        // If backend says "already refunded" or "outside the window", hide the action cleanly
+        const msg = String(j.error || "").toLowerCase();
+        if (msg.includes("already been refunded")) {
+          setOrder({ ...order, status: "refunded" });
+          setNote("Order has already been refunded.");
+          setErr("");
+        } else if (msg.includes("refund window closed") || msg.includes("outside the refund window")) {
+          setNote("This order is outside the refund window.");
+          setErr("");
+        } else {
+          setErr(j.error || "Refund failed");
+        }
+        setConfirming(false);
+        return;
+      }
 
       // reflect updated order state locally
       const updated = {
@@ -149,9 +172,12 @@ export default function OrderLookup() {
       };
       setOrder(updated);
       setConfirming(false);
-      setNote(`Refund processed for ${toUSD(updated.refund_cents ?? updated.total_cents)}. A confirmation email has been sent.`);
+      setNote(
+        `Refund processed for ${toUSD(updated.refund_cents ?? updated.total_cents)}. A confirmation email has been sent.`
+      );
     } catch (e) {
       setErr(e.message || "Refund failed");
+      setConfirming(false);
     } finally {
       setWorking(false);
     }
@@ -345,7 +371,12 @@ export default function OrderLookup() {
                 ) : eligible ? (
                   confirming ? (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button className="btn btn-primary" type="button" onClick={requestRefund} disabled={working}>
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        onClick={requestRefund}
+                        disabled={working}
+                      >
                         {working ? "Processing…" : "Confirm refund"}
                       </button>
                       <button
