@@ -506,3 +506,66 @@ footer .container a.staff-link:hover{
 
 /* Keep topbar crisp */
 .topbar { box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+.vet-visits-container {
+  padding: 24px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #333;
+}
+
+.vet-visits-container h1 {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.vet-visits-container input {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.error-text {
+  color: red;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.vet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.vet-table th,
+.vet-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.vet-table th {
+  background-color: #f0f4f8;
+  font-weight: 600;
+}
+
+.vet-table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.vet-table tr:hover {
+  background-color: #f5faff;
+}
+
+.no-results {
+  text-align: center;
+  padding: 16px;
+  color: #666;
+  font-style: italic;
+}
