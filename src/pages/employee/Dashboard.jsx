@@ -47,7 +47,7 @@ export default function Dashboard() {
           {user.role === "admin" && (
             <ul>
               <li>
-                <Link to="/employees/admin" className="">view employees</Link>
+                <Link to="/employees" className="">view employees</Link>
               </li>
               <li> 
                 <Link to="/reports" className="">run reports</Link>
