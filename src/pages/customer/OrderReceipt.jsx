@@ -13,18 +13,30 @@ const toUSD = (cents) =>
 export default function OrderReceipt() {
   const { id } = useParams();
   const loc = useLocation();
+
   const [order, setOrder] = React.useState(loc.state || null);
   const [err, setErr] = React.useState("");
   const [note, setNote] = React.useState("");
   const [working, setWorking] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false);
 
-  const token = new URLSearchParams(window.location.search).get("t");
+  // Magic token from ?t=...
+  const magic = React.useMemo(
+    () => new URLSearchParams(window.location.search).get("t"),
+    []
+  );
 
+  // Load order on first visit when we don't already have it from navigation state
   React.useEffect(() => {
-    if (order || !id || !token) return;
+    if (order || !id || !magic) return;
+
     (async () => {
       try {
-        const r = await fetch(`${api}/api/public/orders/${id}?t=${token}`);
+        const r = await fetch(`${api}/api/public/orders/${id}`, {
+          headers: {
+            "X-Order-Magic": magic,
+          },
+        });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || "Load failed");
         setOrder(j);
@@ -32,41 +44,66 @@ export default function OrderReceipt() {
         setErr(e.message || "Failed to load order");
       }
     })();
-  }, [id, token, order]);
+  }, [id, magic, order]);
 
-  async function requestRefund() {
+  async function doRefund() {
     if (!order) return;
-    if (!window.confirm("Request a refund for this order?")) return;
 
     setWorking(true);
     setErr("");
     setNote("");
+
     try {
-      const r = await fetch(`${api}/api/public/orders/${order.order_id}/refund?t=${token}`, {
+      const r = await fetch(`${api}/api/public/orders/refund`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // not required by backend but harmless; documents intent
+          "X-Order-Magic": magic || "",
+        },
+        body: JSON.stringify({
+          order_id: order.order_id,
+          email: order.buyer_email,
+          reason: "customer self-service",
+        }),
       });
+
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Refund failed");
-      setOrder((o) => ({ ...o, ...j.order }));
+
+      setOrder((o) => ({
+        ...(o || {}),
+        status: "refunded",
+        refund_cents: j.order?.refund_cents ?? o?.total_cents,
+        refunded_cents: j.order?.refunded_cents ?? o?.total_cents,
+        refunded_at: j.order?.refunded_at ?? new Date().toISOString(),
+      }));
+
       setNote(`Refund processed for ${toUSD(j.order.refund_cents)}.`);
     } catch (e) {
       setErr(e.message || "Refund failed");
     } finally {
       setWorking(false);
+      setConfirming(false);
     }
   }
 
-  if (!token)
+  const refunded = String(order?.status || "").toLowerCase() === "refunded";
+
+  // ---- Render guards ----
+  if (!magic) {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
-        <div className="error">Missing access token. Use the link from your email.</div>
+        <div className="error">
+          Missing access token. Please use the link from your email.
+        </div>
         <Link to="/tickets">Back to tickets</Link>
       </div>
     );
+  }
 
-  if (err)
+  if (err) {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
@@ -74,17 +111,18 @@ export default function OrderReceipt() {
         <Link to="/tickets">Back to tickets</Link>
       </div>
     );
+  }
 
-  if (!order)
+  if (!order) {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
         <p>Loading...</p>
       </div>
     );
+  }
 
-  const refunded = String(order.status || "").toLowerCase() === "refunded";
-
+  // ---- Main UI ----
   return (
     <div
       className="page"
@@ -110,7 +148,15 @@ export default function OrderReceipt() {
         }}
       >
         {note && (
-          <div className="note" style={{ marginBottom: 8 }}>
+          <div
+            className="note"
+            style={{
+              marginBottom: 8,
+              padding: "8px 12px",
+              background: "#e8f5e9",
+              borderRadius: 8,
+            }}
+          >
             {note}
           </div>
         )}
@@ -164,9 +210,34 @@ export default function OrderReceipt() {
           <h3>Actions</h3>
           {refunded ? (
             <div className="note">This order has already been refunded.</div>
+          ) : confirming ? (
+            <div style={{ marginTop: 8 }}>
+              <p style={{ marginBottom: 8 }}>
+                Are you sure you want to request a refund for this order?
+              </p>
+              <button
+                className="btn"
+                onClick={doRefund}
+                disabled={working}
+                style={{ marginRight: 8 }}
+              >
+                {working ? "Processing..." : "Yes, refund order"}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirming(false)}
+                disabled={working}
+              >
+                Cancel
+              </button>
+            </div>
           ) : (
-            <button className="btn" onClick={requestRefund} disabled={working}>
-              {working ? "Processing..." : "Request refund"}
+            <button
+              className="btn"
+              onClick={() => setConfirming(true)}
+              disabled={working}
+            >
+              Request refund
             </button>
           )}
         </div>
