@@ -69,6 +69,8 @@ import Security from "./pages/employee/Security.jsx";
 import RolePage from "./pages/employee/EmployeeByRole.jsx";
 import VetVisitsPage from "./pages/employee/VetVisit.jsx";
 import TicketStats from "./pages/employee/Tickets.jsx";
+import AnimalView from "./pages/employee/AnimalView.jsx";
+import AnimalEdit from "./pages/employee/AnimalEdit.jsx";
 
 /* ---------- Any-employee roles helper ---------- */
 const ANY_EMP = [
@@ -367,7 +369,7 @@ function KeeperDash() {
       <div>
         <ul>
           <li>
-            <Link to="/animalStats">animal directory</Link>
+            <Link to="/animals">animal directory</Link>
           </li>
           <li>
             <Link to="/feedings">view feeding logs</Link>
@@ -828,7 +830,7 @@ export default function App() {
         <Route path="/visit" element={<Visit />} />
         <Route path="/visit/:id" element={<EventDetails />} />
         <Route path="/tickets" element={<CTickets />} />
-        <Route path="/animals" element={<CAnimals />} />
+        {/*<Route path="/animals" element={<CAnimals />} />*/}
         <Route path="/Exhibits" element={<ExhibitsPage />} />
         <Route path="/request" element={<RequestReceived />} />
         <Route path="scheduleEvents" element={<ZooScheduler />} />
@@ -992,10 +994,26 @@ export default function App() {
 
         {/* Animals (employee) */}
         <Route
-          path="/animalStats"
+          path="/animals"
           element={
             <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
               <Animals />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animals/:id"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <AnimalView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animals/:id/edit"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <AnimalEdit />
             </ProtectedRoute>
           }
         />
@@ -1009,7 +1027,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* VetVisit (keeper)*/}
+        {/* VetVisit (vet)*/}
         <Route
           path="/vetvisit"
           element={
