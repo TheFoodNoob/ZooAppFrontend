@@ -18,6 +18,10 @@ import CartWidget from "./components/CartWidget.jsx";
 
 // Public
 import Home from "./pages/ZooHomePage.jsx";
+import Mission from "./pages/about/Mission.jsx";
+import Conservation from "./pages/about/Conservation.jsx";
+import Contact from "./pages/about/Contact.jsx";
+import Donate from "./pages/customer/Donate.jsx";
 import CustomerLogin from "./pages/customer/CustomerLogin.jsx";
 import CustomerRegister from "./pages/customer/Register.jsx";
 import StaffLogin from "./pages/employee/StaffLogin";
@@ -700,6 +704,10 @@ export default function App() {
       <Routes>
         {/* ---------- PUBLIC (customer) ---------- */}
         <Route path="/" element={<Home />} />
+        <Route path="/about/mission" element={<Mission />} />
+        <Route path="/about/conservation" element={<Conservation />} />
+        <Route path="/about/contact" element={<Contact />} />
+        <Route path="/donate" element={<Donate />} />
         <Route path="/visit" element={<Visit />} />
         <Route path="/visit/:id" element={<EventDetails />} />
         <Route path="/tickets" element={<CTickets />} />

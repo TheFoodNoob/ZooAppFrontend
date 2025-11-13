@@ -231,7 +231,7 @@ export default function ZooHomePage() {
               <p style={{ color: "var(--ink-2)" }}>
                 Donations help fund veterinary care, enrichment, and conservation work.
               </p>
-              <a className="btn btn-sm" href="/tickets">
+              <a className="btn btn-sm" href="/donate">
                 Donate
               </a>
             </div>
@@ -271,13 +271,13 @@ export default function ZooHomePage() {
             <div>
               <strong>About</strong>
               <div>
-                <a href="#">Our Mission</a>
+                <a href="/about/mission">Our Mission</a>
               </div>
               <div>
-                <a href="#">Conservation</a>
+                <a href="/about/conservation">Conservation</a>
               </div>
               <div>
-                <a href="#">Contact</a>
+                <a href="/about/contact">Contact</a>
               </div>
             </div>
           </div>
