@@ -37,6 +37,7 @@ import Forgot from "./pages/customer/Forgot.jsx";
 import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
+import Memberships from "./pages/customer/Memberships.jsx";
 
 /* Used for both customer email-verify and the public order OTP verify step */
 import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
@@ -715,6 +716,8 @@ export default function App() {
         <Route path="/Exhibits" element={<ExhibitsPage />} />
         <Route path="/request" element={<RequestReceived />} />
         <Route path="scheduleEvents" element={<ZooScheduler />} />
+        <Route path="/memberships" element={<Memberships />} />
+        
 
         {/* Checkout & order self-service (no staff login) */}
         <Route path="/checkout" element={<Checkout />} />

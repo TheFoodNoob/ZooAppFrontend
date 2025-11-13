@@ -1,6 +1,7 @@
 // src/pages/ZooHomePage.jsx
 import React from "react";
 import { api } from "../api"; // base API url
+import { Link } from "react-router-dom";
 
 // Small date formatting helpers
 const fmtDate = (iso) => {
@@ -200,9 +201,9 @@ export default function ZooHomePage() {
               <p className="note" style={{ background: "transparent", border: 0, padding: 0 }}>
                 Unlimited visits, member nights, and discounts all year long.
               </p>
-              <a className="btn btn-sm" href="/tickets">
+              <Link to="/memberships" className="btn btn-primary">
                 Become a Member
-              </a>
+              </Link>
             </div>
           </div>
         </section>
