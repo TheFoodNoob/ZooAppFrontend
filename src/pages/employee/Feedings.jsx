@@ -21,7 +21,6 @@ export default function Feedings() {
       const res = await fetch(`${api}/api/feedings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log(token);
       if (!res.ok) throw new Error("Failed to load feedings");
       const data = await res.json();
       setFeedings(data);
@@ -62,12 +61,11 @@ export default function Feedings() {
           feeding_time: form.feeding_time,
         }),
       });
-
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to log feeding");
       }
-
       setMsg("Feeding logged!");
       setForm({ animal_id: "", feeding_time: "" });
       await loadFeedings();
@@ -107,6 +105,7 @@ export default function Feedings() {
         <thead>
           <tr>
             <th>Animal</th>
+            <th>Food</th>
             <th>Feeding Time</th>
             <th>Logged By</th>
           </tr>
@@ -115,8 +114,9 @@ export default function Feedings() {
           {feedings.map((f) => (
             <tr key={f.feeding_id}>
               <td>{f.animal_name}</td>
+              <td>{f.food_name}</td>
               <td>{new Date(f.feeding_time).toLocaleString()}</td>
-              <td>{f.feed_recorded_by}</td>
+              <td>{f.employee_first_name + " " + f.employee_last_name}</td>
             </tr>
           ))}
         </tbody>

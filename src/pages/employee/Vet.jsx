@@ -66,7 +66,7 @@ export default function Vet() {
               marginBottom: 8,
             }}
           >
-            <strong>{v.animal_name || "Unknown Animal"}</strong>
+            <strong>{v.name || "Unknown Animal"}</strong>
             <br />
             {new Date(v.visit_date).toLocaleString()}
             <br />
