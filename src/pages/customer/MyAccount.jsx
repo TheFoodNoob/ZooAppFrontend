@@ -40,6 +40,7 @@ function formatUSD(cents) {
 }
 
 export default function MyAccount() {
+  // ✅ use the customerToken from AuthContext (NOT the staff token)
   const { user, customerToken } = useAuth();
   const location = useLocation();
 
@@ -48,25 +49,22 @@ export default function MyAccount() {
   const [account, setAccount] = React.useState(null);
   const [orders, setOrders] = React.useState([]);
 
-  // 🚨 HARD GUARD: must be a logged-in *customer* with a customerToken
-  if (!user || user.role !== "customer" || !customerToken) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location }}
-      />
-    );
-  }
-
+  // ✅ Always call hooks; guard INSIDE the effect, not before it
   React.useEffect(() => {
     let cancelled = false;
+
+    // If not logged in as a customer, just clear and stop
+    if (!user || !customerToken) {
+      setLoading(false);
+      setAccount(null);
+      setOrders([]);
+      return;
+    }
 
     async function load() {
       setLoading(true);
       setError("");
 
-      // Base account from AuthContext in case API is not ready yet
       const baseAccount = {
         name:
           user.full_name ||
@@ -91,11 +89,17 @@ export default function MyAccount() {
         let acctData = null;
         let orderData = [];
 
-        if (acctRes.status === "fulfilled" && acctRes.value.ok) {
+        if (
+          acctRes.status === "fulfilled" &&
+          acctRes.value.ok
+        ) {
           acctData = await acctRes.value.json().catch(() => null);
         }
 
-        if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+        if (
+          ordersRes.status === "fulfilled" &&
+          ordersRes.value.ok
+        ) {
           orderData = await ordersRes.value.json().catch(() => []);
         }
 
@@ -121,7 +125,18 @@ export default function MyAccount() {
     return () => {
       cancelled = true;
     };
-  }, [customerToken, user]);
+  }, [user, customerToken]);
+
+  // ✅ GUARD AFTER ALL HOOKS ARE DECLARED
+  if (!user || !customerToken) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location }}
+      />
+    );
+  }
 
   const membershipStatus = account?.membership_status || "none";
   const isMember = membershipStatus === "active";

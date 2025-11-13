@@ -18,37 +18,63 @@ export function useAuth() {
 
 // Provider: AuthProvider
 export function AuthProvider({ children }) {
-  // STAFF JWT
+  /* ---------- STAFF JWT (NOW sessionStorage-based) ---------- */
   const [token, setToken] = useState(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("authToken") || "";
+    try {
+      // Prefer sessionStorage so staff login dies when browser/tab closes
+      const fromSession = window.sessionStorage.getItem("authToken");
+      if (fromSession) return fromSession;
+
+      // Fallback: if we previously stored it in localStorage, use it once
+      const fromLocal = window.localStorage.getItem("authToken");
+      return fromLocal || "";
+    } catch {
+      return "";
+    }
   });
 
-  // CUSTOMER JWT
+  /* ---------- CUSTOMER JWT (sessionStorage-based) ---------- */
   const [customerToken, setCustomerToken] = useState(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("customerToken") || "";
+    try {
+      const fromSession = window.sessionStorage.getItem("customerToken");
+      if (fromSession) return fromSession;
+
+      const fromLocal = window.localStorage.getItem("customerToken");
+      return fromLocal || "";
+    } catch {
+      return "";
+    }
   });
 
-  // Single "user" object used by the whole app.
-  // For staff:    { employee_id,..., role: 'admin' | 'keeper' | ... }
-  // For customer: { email, first_name, last_name, role: 'customer' }
+  /* ---------- Single user object (staff OR customer) ---------- */
   const [user, setUser] = useState(() => {
     if (typeof window === "undefined") return null;
-    const stored = localStorage.getItem("customerSession");
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return null;
+
+    try {
+      // Prefer sessionStorage for customers
+      const sessionVal = window.sessionStorage.getItem("customerSession");
+      if (sessionVal) {
+        return JSON.parse(sessionVal);
       }
+
+      // Fallback to old localStorage (in case of existing data)
+      const stored = window.localStorage.getItem("customerSession");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore parse errors
     }
+
+    // Staff user will be loaded via /api/employee/me when staff token is set
     return null;
   });
 
   const [loading, setLoading] = useState(false);
 
-  // Helper for making authenticated requests with the STAFF JWT
+  // Helper for making authenticated STAFF requests with the STAFF JWT
   const authFetch = useCallback(
     async (url, opts = {}) => {
       const headers = {
@@ -60,7 +86,7 @@ export function AuthProvider({ children }) {
     [token]
   );
 
-  // When the STAFF token changes, load the current employee profile
+  /* ---------- Load staff profile when STAFF token changes ---------- */
   useEffect(() => {
     let cancelled = false;
     if (!token) return;
@@ -74,11 +100,12 @@ export function AuthProvider({ children }) {
         if (!cancelled) setUser(me || null);
       } catch {
         if (!cancelled) {
-          // Token invalid/expired → clear it out
           setUser(null);
           setToken("");
           if (typeof window !== "undefined") {
-            localStorage.removeItem("authToken");
+            // clean up both storages for safety
+            window.sessionStorage.removeItem("authToken");
+            window.localStorage.removeItem("authToken");
           }
         }
       }
@@ -89,7 +116,7 @@ export function AuthProvider({ children }) {
     };
   }, [token, authFetch]);
 
-  // 🔐 STAFF login → /api/auth/login
+  /* ---------- STAFF login ---------- */
   async function loginEmployee(email, password) {
     try {
       setLoading(true);
@@ -108,7 +135,10 @@ export function AuthProvider({ children }) {
       const tok = j.token;
       setToken(tok);
       if (typeof window !== "undefined") {
-        localStorage.setItem("authToken", tok);
+        // ✅ now: store in sessionStorage, not localStorage
+        window.sessionStorage.setItem("authToken", tok);
+        // clear any old persistent value
+        window.localStorage.removeItem("authToken");
       }
 
       // Load staff profile immediately after login
@@ -130,7 +160,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // 🧑‍🦱 CUSTOMER login → /api/customer-auth/login
+  /* ---------- CUSTOMER login ---------- */
   async function loginCustomer(email, password) {
     try {
       setLoading(true);
@@ -161,19 +191,23 @@ export function AuthProvider({ children }) {
 
       setUser(customerUser);
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("customerSession", JSON.stringify(customerUser));
-      }
-
       const tok = j.token || "";
-      if (tok) {
-        setCustomerToken(tok);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("customerToken", tok);
-        }
-      }
+      setCustomerToken(tok);
 
       if (typeof window !== "undefined") {
+        // ✅ customer: sessionStorage only
+        window.sessionStorage.setItem(
+          "customerSession",
+          JSON.stringify(customerUser)
+        );
+        if (tok) {
+          window.sessionStorage.setItem("customerToken", tok);
+        }
+
+        // Clean up any old localStorage values from previous implementation
+        window.localStorage.removeItem("customerSession");
+        window.localStorage.removeItem("customerToken");
+
         window.dispatchEvent(new Event("auth:changed"));
       }
 
@@ -185,28 +219,37 @@ export function AuthProvider({ children }) {
     }
   }
 
+  /* ---------- Logout (staff + customer) ---------- */
   function logout() {
     setUser(null);
     setToken("");
     setCustomerToken("");
+
     if (typeof window !== "undefined") {
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("customerSession");
-      localStorage.removeItem("customerToken");
+      // Staff tokens
+      window.sessionStorage.removeItem("authToken");
+      window.localStorage.removeItem("authToken");
+
+      // Customer – both the new session-based and old local-based keys
+      window.localStorage.removeItem("customerSession");
+      window.localStorage.removeItem("customerToken");
+      window.sessionStorage.removeItem("customerSession");
+      window.sessionStorage.removeItem("customerToken");
+
       window.dispatchEvent(new Event("auth:changed"));
     }
   }
 
   const value = useMemo(
     () => ({
-      token,          // staff token
-      customerToken,  // customer token
+      token, // staff token
+      customerToken, // customer token
       user,
       loading,
-      setToken,          // kept for compatibility
-      setCustomerToken,  // if you ever need it
-      setUser,           // kept for compatibility
-      authFetch,         // staff helper
+      setToken,
+      setCustomerToken,
+      setUser,
+      authFetch, // staff helper
       loginEmployee,
       loginCustomer,
       logout,
