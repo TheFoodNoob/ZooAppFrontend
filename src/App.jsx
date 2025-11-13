@@ -38,11 +38,11 @@ import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
 import Memberships from "./pages/customer/Memberships.jsx";
+import MyAccount from "./pages/customer/MyAccount.jsx";
 
 /* Used for both customer email-verify and the public order OTP verify step */
 import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
 import VerifySent from "./pages/customer/VerifySent.jsx";
-import VerifyBanner from "./components/VerifyBanner.jsx";
 import Checkout from "./pages/customer/Checkout.jsx";
 import OrderReceipt from "./pages/customer/OrderReceipt.jsx";
 import OrderLookup from "./pages/customer/OrderLookup.jsx";
@@ -103,7 +103,15 @@ function RoleHub() {
 /* helper wrappers to block login pages when already authenticated */
 function RedirectIfAuthed({ children }) {
   const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : children;
+
+  if (!user) return children;
+
+  if (user.role === "customer") {
+    return <Navigate to="/account" replace />;
+  }
+
+  // staff
+  return <Navigate to="/dashboard" replace />;
 }
 
 /* ---------- Shared page shell ---------- */
@@ -357,10 +365,14 @@ function KeeperDash() {
         </div>
       )}
       <div>
-          <ul>
-              <li><Link to="/animalStats">animal directory</Link></li>
-              <li><Link to = "/feedings">view feeding logs</Link></li>
-          </ul>
+        <ul>
+          <li>
+            <Link to="/animalStats">animal directory</Link>
+          </li>
+          <li>
+            <Link to="/feedings">view feeding logs</Link>
+          </li>
+        </ul>
       </div>
     </CardPage>
   );
@@ -519,6 +531,11 @@ function Nav() {
   const btnRef = React.useRef(null);
   const location = useLocation();
 
+  // Distinguish staff vs customer
+  const isCustomer = user && user.role === "customer";
+  const isStaff =
+    user && user.role !== "customer" && ANY_EMP.includes(user.role);
+
   React.useEffect(() => {
     function onDocClick(e) {
       if (!btnRef.current) return;
@@ -533,45 +550,70 @@ function Nav() {
     setOpen(false);
   }, [location.pathname]);
 
-  const AuthLinks = ({ onClick }) => (
+  // STAFF NAV LINKS
+  const StaffLinks = ({ onClick }) => (
     <>
       <li>
-        <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
           Dashboard
         </NavLink>
       </li>
       {(user.role === "admin" || user.role === "ops_manager") && (
         <li>
-          <NavLink to="/employees" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          <NavLink
+            to="/employees"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
             Employees
           </NavLink>
         </li>
       )}
       {user.role === "admin" && (
         <li>
-          <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          <NavLink
+            to="/reports"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
             Reports
           </NavLink>
         </li>
       )}
       {(user.role === "admin" || user.role === "ops_manager") && (
         <li>
-          <NavLink to="/events" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          <NavLink
+            to="/events"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
             Events
           </NavLink>
         </li>
       )}
-      {["admin","ops_manager","gate_agent"].includes(user.role) && (
+      {["admin", "ops_manager", "gate_agent"].includes(user.role) && (
         <li>
           {/* Staff Orders now lives at /staff/orders */}
-          <NavLink to="/staff/orders" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+          <NavLink
+            to="/staff/orders"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
             Orders
           </NavLink>
         </li>
       )}
 
       <li>
-        <NavLink to="/role" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+        <NavLink
+          to="/role"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
           My Role
         </NavLink>
       </li>
@@ -590,33 +632,81 @@ function Nav() {
     </>
   );
 
+  // PUBLIC/CUSTOMER NAV LINKS
   const PublicLinks = ({ onClick }) => (
     <>
       <li>
-        <NavLink to="/" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+        <NavLink
+          to="/"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
           Home
         </NavLink>
       </li>
       <li>
-        <NavLink to="/visit" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+        <NavLink
+          to="/visit"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
           Visit
         </NavLink>
       </li>
       <li>
-        <NavLink to="/tickets" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
+        <NavLink
+          to="/tickets"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
           Tickets
         </NavLink>
       </li>
+
+      {/* Always show My Account; route is protected so
+          logged-out users are redirected to /login */}
       <li>
-        <NavLink to="/login" className={({ isActive }) => (isActive ? "active" : "")} onClick={onClick}>
-          Login
+        <NavLink
+          to="/account"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          My Account
         </NavLink>
       </li>
+
+      {isCustomer ? (
+        <li>
+          <button
+            className="btn btn-ghost btn-sm"
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              logout();
+            }}
+          >
+            Logout
+          </button>
+        </li>
+      ) : (
+        <li>
+          <NavLink
+            to="/login"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
+            Login
+          </NavLink>
+        </li>
+      )}
     </>
   );
 
   return (
-    <header className="topbar" style={{ position: "sticky", top: 0, zIndex: 50 }}>
+    <header
+      className="topbar"
+      style={{ position: "sticky", top: 0, zIndex: 50 }}
+    >
       <div
         className="nav"
         style={{
@@ -629,15 +719,20 @@ function Nav() {
           gap: 12,
         }}
       >
-        <div className="brand" style={{ fontWeight: 800 }}>H-Town Zoo</div>
+        <div className="brand" style={{ fontWeight: 800 }}>
+          H-Town Zoo
+        </div>
 
         {/* Desktop links */}
         <ul className="links hide-on-mobile">
-          {user ? <AuthLinks /> : <PublicLinks />}
+          {isStaff ? <StaffLinks /> : <PublicLinks />}
         </ul>
 
         {/* Right: Cart + mobile menu */}
-        <div className="nav-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          className="nav-right"
+          style={{ display: "flex", alignItems: "center", gap: 10 }}
+        >
           <div style={{ position: "relative", flexShrink: 0 }}>
             <CartWidget />
           </div>
@@ -657,7 +752,11 @@ function Nav() {
             {open && (
               <div className="mobile-menu" role="menu">
                 <ul>
-                  {user ? <AuthLinks onClick={() => setOpen(false)} /> : <PublicLinks onClick={() => setOpen(false)} />}
+                  {isStaff ? (
+                    <StaffLinks onClick={() => setOpen(false)} />
+                  ) : (
+                    <PublicLinks onClick={() => setOpen(false)} />
+                  )}
                 </ul>
               </div>
             )}
@@ -672,12 +771,29 @@ function Nav() {
 function SiteFooter() {
   return (
     <footer>
-      <div className="container" style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap"}}>
-        <div style={{fontWeight:800}}>H-Town Zoo</div>
-        <div style={{fontSize:13, opacity:.85}}>© {new Date().getFullYear()} H-Town Zoo</div>
-        <div style={{display:"flex", gap:14, alignItems:"center"}}>
+      <div
+        className="container"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontWeight: 800 }}>H-Town Zoo</div>
+        <div style={{ fontSize: 13, opacity: 0.85 }}>
+          © {new Date().getFullYear()} H-Town Zoo
+        </div>
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
           <NavLink to="/login">Customer Login</NavLink>
-          <a className="staff-link" href="/staff/login" title="Employee portal">Staff Login</a>
+          <a
+            className="staff-link"
+            href="/staff/login"
+            title="Employee portal"
+          >
+            Staff Login
+          </a>
         </div>
       </div>
     </footer>
@@ -701,7 +817,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Nav />
-      <VerifyBanner />
+      
       <Routes>
         {/* ---------- PUBLIC (customer) ---------- */}
         <Route path="/" element={<Home />} />
@@ -717,7 +833,6 @@ export default function App() {
         <Route path="/request" element={<RequestReceived />} />
         <Route path="scheduleEvents" element={<ZooScheduler />} />
         <Route path="/memberships" element={<Memberships />} />
-        
 
         {/* Checkout & order self-service (no staff login) */}
         <Route path="/checkout" element={<Checkout />} />
@@ -750,6 +865,7 @@ export default function App() {
             </RedirectIfAuthed>
           }
         />
+        <Route path="/account" element={<MyAccount />} />
         <Route
           path="/staff/login"
           element={
@@ -897,7 +1013,7 @@ export default function App() {
         <Route
           path="/vetvisit"
           element={
-            <ProtectedRoute roles={["admin","vet", "keeper"]}>
+            <ProtectedRoute roles={["admin", "vet", "keeper"]}>
               <VetVisitsPage />
             </ProtectedRoute>
           }
@@ -912,18 +1028,20 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/reports/tickets"
+        <Route
+          path="/reports/tickets"
           element={
-            <ProtectedRoute roles={["admin","op_manager","gate_agent"]}>
-              <TicketStats/>
+            <ProtectedRoute roles={["admin", "op_manager", "gate_agent"]}>
+              <TicketStats />
             </ProtectedRoute>
-          }/>
+          }
+        />
 
         {/* Events */}
         <Route
           path="/events"
           element={
-            <ProtectedRoute roles={["admin", "ops_manager","coordinator"]}>
+            <ProtectedRoute roles={["admin", "ops_manager", "coordinator"]}>
               <Events />
             </ProtectedRoute>
           }
@@ -957,7 +1075,7 @@ export default function App() {
         <Route
           path="/staff/orders"
           element={
-            <ProtectedRoute roles={["admin","ops_manager","gate_agent"]}>
+            <ProtectedRoute roles={["admin", "ops_manager", "gate_agent"]}>
               <Orders />
             </ProtectedRoute>
           }

@@ -5,20 +5,38 @@ import { useAuth } from "../context/AuthContext";
 
 /**
  * Wrap any route that needs auth:
- *   <ProtectedRoute roles={['admin','keeper']}><StaffPage/></ProtectedRoute>
- * If `roles` is omitted, it only checks that a user is logged in.
+ *   Staff:  <ProtectedRoute roles={['admin','keeper']}><StaffPage/></ProtectedRoute>
+ *   Customer: <ProtectedRoute requireCustomer><MyAccount/></ProtectedRoute>
  */
-export default function ProtectedRoute({ children, roles }) {
+export default function ProtectedRoute({ children, roles, requireCustomer }) {
   const { loading: ctxLoading, user } = useAuth();
   const location = useLocation();
   const loading = Boolean(ctxLoading);
 
   if (loading) return <div style={{ padding: 24 }}>Loading…</div>;
 
+  // ------ CUSTOMER-ONLY ROUTES ------
+  if (requireCustomer) {
+    if (!user || user.role !== "customer") {
+      return (
+        <Navigate
+          to="/login"
+          replace
+          state={{
+            from: location,
+            flash: { type: "info", message: "Please log in to continue." },
+          }}
+        />
+      );
+    }
+    return children;
+  }
+
+  // ------ STAFF ROUTES (roles-based) ------
   const isStaffArea = location.pathname.startsWith("/staff");
-  // Prefer staff login when a route declares employee roles
   const preferStaffLogin = Boolean(roles && roles.length > 0);
-  const loginPath = preferStaffLogin ? "/staff/login" : (isStaffArea ? "/staff/login" : "/login");
+  const loginPath =
+    preferStaffLogin || isStaffArea ? "/staff/login" : "/login";
 
   if (!user) {
     return (

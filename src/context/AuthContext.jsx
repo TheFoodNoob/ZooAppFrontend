@@ -18,15 +18,37 @@ export function useAuth() {
 
 // Provider: AuthProvider
 export function AuthProvider({ children }) {
-  // Safely read initial token from localStorage (browser only)
+  // STAFF JWT
   const [token, setToken] = useState(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("authToken") || "";
   });
-  const [user, setUser] = useState(null);
+
+  // CUSTOMER JWT
+  const [customerToken, setCustomerToken] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("customerToken") || "";
+  });
+
+  // Single "user" object used by the whole app.
+  // For staff:    { employee_id,..., role: 'admin' | 'keeper' | ... }
+  // For customer: { email, first_name, last_name, role: 'customer' }
+  const [user, setUser] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const stored = localStorage.getItem("customerSession");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
   const [loading, setLoading] = useState(false);
 
-  // Helper for making authenticated requests with the staff JWT
+  // Helper for making authenticated requests with the STAFF JWT
   const authFetch = useCallback(
     async (url, opts = {}) => {
       const headers = {
@@ -38,16 +60,12 @@ export function AuthProvider({ children }) {
     [token]
   );
 
-  // When the staff token changes, try to load the current employee profile
+  // When the STAFF token changes, load the current employee profile
   useEffect(() => {
     let cancelled = false;
+    if (!token) return;
 
     (async () => {
-      if (!token) {
-        setUser(null);
-        return;
-      }
-
       try {
         const r = await authFetch(`${api}/api/employee/me`);
         if (!r.ok) throw new Error("Auth check failed");
@@ -71,7 +89,7 @@ export function AuthProvider({ children }) {
     };
   }, [token, authFetch]);
 
-  // STAFF login → /api/auth/login
+  // 🔐 STAFF login → /api/auth/login
   async function loginEmployee(email, password) {
     try {
       setLoading(true);
@@ -112,32 +130,91 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // 🧑‍🦱 CUSTOMER login → /api/customer-auth/login
+  async function loginCustomer(email, password) {
+    try {
+      setLoading(true);
+
+      const r = await fetch(`${api}/api/customer-auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        return { ok: false, error: j.error || "Login failed" };
+      }
+
+      const base =
+        j.customer ||
+        j.user || {
+          email: j.email || email,
+          first_name: j.first_name,
+          last_name: j.last_name,
+        };
+
+      const customerUser = {
+        ...base,
+        role: "customer",
+      };
+
+      setUser(customerUser);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("customerSession", JSON.stringify(customerUser));
+      }
+
+      const tok = j.token || "";
+      if (tok) {
+        setCustomerToken(tok);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("customerToken", tok);
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth:changed"));
+      }
+
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message || "Login failed" };
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function logout() {
     setUser(null);
     setToken("");
+    setCustomerToken("");
     if (typeof window !== "undefined") {
       localStorage.removeItem("authToken");
+      localStorage.removeItem("customerSession");
+      localStorage.removeItem("customerToken");
       window.dispatchEvent(new Event("auth:changed"));
     }
   }
 
   const value = useMemo(
     () => ({
-      token,
+      token,          // staff token
+      customerToken,  // customer token
       user,
       loading,
-      setToken, // kept for compatibility
-      setUser,  // kept for compatibility
-      authFetch,
+      setToken,          // kept for compatibility
+      setCustomerToken,  // if you ever need it
+      setUser,           // kept for compatibility
+      authFetch,         // staff helper
       loginEmployee,
+      loginCustomer,
       logout,
     }),
-    [token, user, loading, authFetch]
+    [token, customerToken, user, loading, authFetch]
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
-// Default export kept for compatibility:
-//   import AuthProvider from "...";
 export default AuthProvider;

@@ -62,11 +62,11 @@ export default function Memberships() {
 
           <div className="membership-links">
             {/* Update these paths if your customer auth routes are different */}
-            <Link to="/customer/login" className="btn btn-ghost">
-              Customer Login
+            <Link to="/login" className="btn btn-ghost">
+                Customer Login
             </Link>
-            <Link to="/customer/register" className="btn btn-ghost">
-              Create Account
+            <Link to="/register" className="btn btn-ghost">
+                Create Account
             </Link>
           </div>
         </div>

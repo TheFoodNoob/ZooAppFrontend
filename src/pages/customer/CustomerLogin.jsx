@@ -19,17 +19,15 @@ export default function CustomerLogin() {
     e.preventDefault();
     setMsg("");
     setSubmitting(true);
+
     const r = await loginCustomer(email, password);
     setSubmitting(false);
 
     if (!r.ok) {
       setMsg(r.error || "Login failed");
     } else {
-      // Send them back to where they came from, or to home.
-      const backTo = loc.state?.from?.pathname
-        ? loc.state.from.pathname + (loc.state.from.search || "")
-        : "/";
-      navigate(backTo, { replace: true });
+      // Always send customer to My Account on success
+      navigate("/account", { replace: true });
     }
   }
 
@@ -39,8 +37,11 @@ export default function CustomerLogin() {
 
       <div className="auth-wrap" style={{ width: "min(560px, 94vw)" }}>
         <div className="auth-card">
-          {/* Flash from ProtectedRoute */}
-          {flashMsg && <div className="note" style={{ marginBottom: 12 }}>{flashMsg}</div>}
+          {flashMsg && (
+            <div className="note" style={{ marginBottom: 12 }}>
+              {flashMsg}
+            </div>
+          )}
 
           <form onSubmit={onLogin}>
             <label>Email</label>
@@ -61,20 +62,29 @@ export default function CustomerLogin() {
               autoComplete="current-password"
             />
 
-            <NavLink to="/forgot" style={{ fontSize: 12 }}>Forgot password?</NavLink>
+            <NavLink to="/forgot" style={{ fontSize: 12 }}>
+              Forgot password?
+            </NavLink>
 
             <div className="row" style={{ marginTop: 10, gap: 10 }}>
-              <button className="btn btn-primary" type="submit" disabled={submitting}>
+              <button
+                className="btn btn-primary"
+                type="submit"
+                disabled={submitting}
+              >
                 {submitting ? "Logging in…" : "Login"}
               </button>
 
-              {/* Go to proper registration page */}
               <Link className="btn" to="/register">
                 Create account
               </Link>
             </div>
 
-            {msg && <div className="error" style={{ marginTop: 10 }}>{msg}</div>}
+            {msg && (
+              <div className="error" style={{ marginTop: 10 }}>
+                {msg}
+              </div>
+            )}
           </form>
         </div>
 
