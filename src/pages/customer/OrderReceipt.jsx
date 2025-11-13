@@ -14,21 +14,21 @@ export default function OrderReceipt() {
   const { id } = useParams();
   const loc = useLocation();
 
-  const [order, setOrder] = React.useState(loc.state || null);
+  // Order may be passed in via navigate(..., { state: { order } })
+  const [order, setOrder] = React.useState(loc.state?.order || null);
+
+  // For this page we treat `t` as the **magic lookup token**, not a JWT
+  const [magic, setMagic] = React.useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return loc.state?.magic || params.get("t") || "";
+  });
+
   const [err, setErr] = React.useState("");
   const [note, setNote] = React.useState("");
-  const [working, setWorking] = React.useState(false);
-  const [confirming, setConfirming] = React.useState(false);
 
-  // Magic token from ?t=...
-  const magic = React.useMemo(
-    () => new URLSearchParams(window.location.search).get("t"),
-    []
-  );
-
-  // Load order on first visit when we don't already have it from navigation state
+  // Load order from API when we have a magic token but no order yet
   React.useEffect(() => {
-    if (order || !id || !magic) return;
+    if (!id || !magic || order) return;
 
     (async () => {
       try {
@@ -46,57 +46,16 @@ export default function OrderReceipt() {
     })();
   }, [id, magic, order]);
 
-  async function doRefund() {
-    if (!order) return;
+  // --------- early states ---------
 
-    setWorking(true);
-    setErr("");
-    setNote("");
-
-    try {
-      const r = await fetch(`${api}/api/public/orders/refund`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // not required by backend but harmless; documents intent
-          "X-Order-Magic": magic || "",
-        },
-        body: JSON.stringify({
-          order_id: order.order_id,
-          email: order.buyer_email,
-          reason: "customer self-service",
-        }),
-      });
-
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "Refund failed");
-
-      setOrder((o) => ({
-        ...(o || {}),
-        status: "refunded",
-        refund_cents: j.order?.refund_cents ?? o?.total_cents,
-        refunded_cents: j.order?.refunded_cents ?? o?.total_cents,
-        refunded_at: j.order?.refunded_at ?? new Date().toISOString(),
-      }));
-
-      setNote(`Refund processed for ${toUSD(j.order.refund_cents)}.`);
-    } catch (e) {
-      setErr(e.message || "Refund failed");
-    } finally {
-      setWorking(false);
-      setConfirming(false);
-    }
-  }
-
-  const refunded = String(order?.status || "").toLowerCase() === "refunded";
-
-  // ---- Render guards ----
   if (!magic) {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
         <div className="error">
-          Missing access token. Please use the link from your email.
+          Missing access token. Please use the link from your email, or visit the{" "}
+          <Link to="/orders">“Find my order”</Link> page and enter your order
+          number and verification code.
         </div>
         <Link to="/tickets">Back to tickets</Link>
       </div>
@@ -117,12 +76,13 @@ export default function OrderReceipt() {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
-        <p>Loading...</p>
+        <p>Loading…</p>
       </div>
     );
   }
 
-  // ---- Main UI ----
+  const refunded = String(order.status || "").toLowerCase() === "refunded";
+
   return (
     <div
       className="page"
@@ -148,15 +108,7 @@ export default function OrderReceipt() {
         }}
       >
         {note && (
-          <div
-            className="note"
-            style={{
-              marginBottom: 8,
-              padding: "8px 12px",
-              background: "#e8f5e9",
-              borderRadius: 8,
-            }}
-          >
+          <div className="note" style={{ marginBottom: 8 }}>
             {note}
           </div>
         )}
@@ -204,42 +156,29 @@ export default function OrderReceipt() {
             <span>Total</span>
             <span>{toUSD(order.total_cents)}</span>
           </div>
+
+          {refunded && (
+            <div style={{ marginTop: 6 }}>
+              <span style={{ fontWeight: 700 }}>Refunded:</span>{" "}
+              {toUSD(
+                order.refund_cents ??
+                  order.refunded_cents ??
+                  order.total_cents
+              )}
+            </div>
+          )}
         </div>
 
-        <div style={{ marginTop: "1.25rem" }}>
-          <h3>Actions</h3>
-          {refunded ? (
-            <div className="note">This order has already been refunded.</div>
-          ) : confirming ? (
-            <div style={{ marginTop: 8 }}>
-              <p style={{ marginBottom: 8 }}>
-                Are you sure you want to request a refund for this order?
-              </p>
-              <button
-                className="btn"
-                onClick={doRefund}
-                disabled={working}
-                style={{ marginRight: 8 }}
-              >
-                {working ? "Processing..." : "Yes, refund order"}
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setConfirming(false)}
-                disabled={working}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              className="btn"
-              onClick={() => setConfirming(true)}
-              disabled={working}
-            >
-              Request refund
-            </button>
-          )}
+        <div style={{ marginTop: "1.25rem", textAlign: "left" }}>
+          <h3>Refunds</h3>
+          <p style={{ margin: 0, color: "#444" }}>
+            This receipt link lets you <strong>view</strong> your order. To
+            request a refund, please go to the{" "}
+            <Link to="/orders">“Find my order”</Link> page, enter your order
+            number and email, and use the verification code sent to you. That
+            flow uses a secure one-time code and will let you cancel if you’re
+            still within the refund window.
+          </p>
         </div>
       </div>
 
