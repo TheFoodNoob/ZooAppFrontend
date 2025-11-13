@@ -58,6 +58,7 @@ import Events from "./pages/employee/Events.jsx";
 import EventView from "./pages/employee/EventView.jsx";
 import EventEdit from "./pages/employee/EventEdit.jsx";
 import Feedings from "./pages/employee/Feedings.jsx";
+import FeedingsView from "./pages/employee/FeedingsView.jsx";
 import Orders from "./pages/employee/Orders.jsx";
 
 // Role landing pages
@@ -71,6 +72,7 @@ import VetVisitsPage from "./pages/employee/VetVisit.jsx";
 import TicketStats from "./pages/employee/Tickets.jsx";
 import AnimalView from "./pages/employee/AnimalView.jsx";
 import AnimalEdit from "./pages/employee/AnimalEdit.jsx";
+import FeedingsEdit from "./pages/employee/FeedingsEdit.jsx";
 
 /* ---------- Any-employee roles helper ---------- */
 const ANY_EMP = [
@@ -1024,6 +1026,22 @@ export default function App() {
           element={
             <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
               <Feedings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feedings/:id"
+          element={
+            <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
+              <FeedingsView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feedings/:id/edit"
+          element={
+            <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
+              <FeedingsEdit />
             </ProtectedRoute>
           }
         />

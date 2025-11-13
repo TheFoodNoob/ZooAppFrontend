@@ -1,7 +1,7 @@
 // src/pages/employee/StaffLogin.jsx
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { api } from "../../api";
+import { api } from "../../api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function StaffLogin() {
