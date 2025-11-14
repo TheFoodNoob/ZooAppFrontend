@@ -1,4 +1,4 @@
-// src/pages/customer/AccountOrderDetail.jsx
+// src/pages/customer/AccountPosReceipt.jsx
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api";
@@ -17,18 +17,6 @@ function formatDate(s) {
   }
 }
 
-function formatTime(s) {
-  if (!s) return "";
-  try {
-    return new Date(s).toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(s);
-  }
-}
-
 function formatUSD(cents) {
   if (cents == null) return "";
   const n = Number(cents) / 100;
@@ -38,7 +26,7 @@ function formatUSD(cents) {
   });
 }
 
-export default function AccountOrderDetail() {
+export default function AccountPosReceipt() {
   const { id } = useParams();
   const { customerToken } = useAuth();
 
@@ -52,15 +40,15 @@ export default function AccountOrderDetail() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${api}/api/customer/orders/${id}`, {
+        const res = await fetch(`${api}/api/customer/pos/${id}`, {
           headers: { Authorization: `Bearer ${customerToken}` },
         });
-        if (!res.ok) throw new Error(`Failed to load order (${res.status})`);
+        if (!res.ok) throw new Error(`Failed to load receipt (${res.status})`);
         const data = await res.json();
-        setHeader(data.header || data); // backwards-compat
+        setHeader(data.header);
         setItems(data.items || []);
       } catch (e) {
-        setError(e.message || "Failed to load order");
+        setError(e.message || "Failed to load receipt");
       } finally {
         setLoading(false);
       }
@@ -71,67 +59,69 @@ export default function AccountOrderDetail() {
   return (
     <div className="page">
       <div className="container">
-        <h1>Ticket order</h1>
+        <h1>Gift shop &amp; food purchase</h1>
 
         {loading && <p>Loading…</p>}
         {error && !loading && <div className="error">{error}</div>}
 
         {header && !loading && !error && (
           <div className="card" style={{ marginTop: 16 }}>
-            <h2>Order #{header.order_id}</h2>
+            <h2>Receipt #{header.pos_sale_id}</h2>
             <p>
-              <strong>Placed on:</strong>{" "}
-              {formatDate(header.created_at)} {formatTime(header.created_at)}
+              <strong>Date:</strong> {formatDate(header.created_at)}
               <br />
-              <strong>Visit date:</strong> {formatDate(header.visit_date)}
+              <strong>Source:</strong> {header.source}
               <br />
-              <strong>Status:</strong>{" "}
-              {header.status
-                ? header.status.charAt(0).toUpperCase() +
-                  header.status.slice(1)
-                : "—"}
-              <br />
-              <strong>Total:</strong> {formatUSD(header.total_cents)}
+              <strong>Membership at sale:</strong>{" "}
+              {header.membership_tier_at_sale || "None"}
             </p>
 
-            {items.length > 0 ? (
+            {items.length > 0 && (
               <>
-                <h3 style={{ marginTop: 16 }}>Tickets</h3>
+                <h3 style={{ marginTop: 16 }}>Items</h3>
                 <div style={{ marginTop: 8, overflowX: "auto" }}>
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>Ticket type</th>
+                        <th>Item</th>
+                        <th>Category</th>
                         <th>Qty</th>
                         <th>Price</th>
                         <th>Line total</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((it) => (
-                        <tr key={it.order_item_id}>
-                          <td>{it.ticket_name || "Ticket"}</td>
+                      {items.map((it, idx) => (
+                        <tr key={it.pos_sale_item_id || it.pos_item_id || `i-${idx}`}>
+                          <td>{it.item_name || it.name || "Item"}</td>
+                          <td>{it.category || "—"}</td>
                           <td>{it.quantity}</td>
                           <td>{formatUSD(it.price_cents)}</td>
-                          <td>{formatUSD(it.line_total_cents)}</td>
+                          <td>{formatUSD(it.line_total_cents || it.line_subtotal_cents)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </>
-            ) : (
-              <p style={{ marginTop: 16, fontSize: 14 }}>
-                This order does not contain any ticket items. If it only
-                included food or gift shop purchases, check the{" "}
-                <em>Gift shop &amp; food purchases</em> section on your account.
-              </p>
             )}
 
+            <p style={{ marginTop: 16 }}>
+              <strong>Subtotal:</strong> {formatUSD(header.subtotal_cents)}
+              <br />
+              <strong>Discount:</strong>{" "}
+              {header.discount_pct
+                ? `${header.discount_pct}% (-${formatUSD(
+                    header.discount_cents
+                  )})`
+                : "—"}
+              <br />
+              <strong>Total paid:</strong> {formatUSD(header.total_cents)}
+            </p>
+
             <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
-              Ticket line items are stored in the <code>order_item</code> table.
-              This view ties those details back to your customer account and
-              visit history.
+              Line-item breakdown is stored in the <code>pos_sale_item</code>{" "}
+              table.
             </p>
 
             <p style={{ marginTop: 16 }}>

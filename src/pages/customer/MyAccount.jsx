@@ -358,19 +358,12 @@ export default function MyAccount() {
                           <td>{p.membership_tier_at_sale || "None"}</td>
                           <td>
                             {p.discount_pct
-                              ? `${p.discount_pct}% (-${formatUSD(
-                                  p.discount_cents
-                                )})`
+                              ? `${p.discount_pct}% (-${formatUSD(p.discount_cents)})`
                               : "—"}
                           </td>
                           <td>{formatUSD(p.total_cents)}</td>
                           <td>
-                            <Link
-                              to={`/account/pos/${p.pos_sale_id}`}
-                              state={{ pos: p }}
-                            >
-                              View details
-                            </Link>
+                            <Link to={`/account/pos/${p.pos_sale_id}`}>View details</Link>
                           </td>
                         </tr>
                       ))}

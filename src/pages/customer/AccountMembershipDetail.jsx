@@ -1,7 +1,8 @@
+// src/pages/customer/AccountMembershipDetail.jsx
 import React from "react";
-import { useParams, useLocation, Link } from "react-router-dom";
-
-import { } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { api } from "../../api";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 function formatDate(s) {
   if (!s) return "";
@@ -22,66 +23,72 @@ function formatUSD(cents) {
   return n.toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 2,
   });
 }
 
 export default function AccountMembershipDetail() {
   const { id } = useParams();
-  const location = useLocation();
-  const membership = location.state?.membership;
+  const { customerToken } = useAuth();
 
-  if (!membership) {
-    return (
-      <div className="page">
-        <div className="container">
-          <h1>Membership transaction #{id}</h1>
-          <div className="card" style={{ marginTop: 20 }}>
-            <p>We couldn&apos;t load this membership transaction here.</p>
-            <p style={{ fontSize: 14, marginTop: 8 }}>
-              Please return to <Link to="/account">My Account</Link> and choose
-              it again from the membership history list.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [m, setM] = React.useState(null);
+
+  React.useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`${api}/api/customer/memberships/${id}`, {
+          headers: { Authorization: `Bearer ${customerToken}` },
+        });
+        if (!res.ok)
+          throw new Error(`Failed to load membership (${res.status})`);
+        setM(await res.json());
+      } catch (e) {
+        setError(e.message || "Failed to load membership");
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (customerToken) load();
+  }, [id, customerToken]);
 
   return (
     <div className="page">
       <div className="container">
         <h1>Membership purchase</h1>
-        <div className="card" style={{ marginTop: 20 }}>
-          <h2 style={{ marginTop: 0 }}>
-            Transaction #{membership.membership_txn_id}
-          </h2>
-          <p>
-            <strong>Tier:</strong> {membership.membership_tier}
-            <br />
-            <strong>Started:</strong> {formatDate(membership.started_on)}
-            <br />
-            <strong>Ends:</strong> {formatDate(membership.ends_on)}
-            <br />
-            <strong>Amount:</strong> {formatUSD(membership.total_cents)}
-            <br />
-            <strong>Discount:</strong>{" "}
-            {membership.discount_pct
-              ? `${membership.discount_pct}%`
-              : "—"}
-            <br />
-            <strong>Source:</strong> {membership.source}
-          </p>
-          <p style={{ fontSize: 13, color: "var(--muted)" }}>
-            Memberships are tracked in the <code>membership_txn</code> table.
-            This view shows one transaction and how it contributes to your
-            membership status.
-          </p>
-        </div>
 
-        <p style={{ marginTop: 16 }}>
-          &larr; <Link to="/account">Back to My Account</Link>
-        </p>
+        {loading && <p>Loading…</p>}
+        {error && !loading && <div className="error">{error}</div>}
+
+        {m && !loading && !error && (
+          <div className="card" style={{ marginTop: 16 }}>
+            <h2>Transaction #{m.membership_txn_id}</h2>
+            <p>
+              <strong>Tier:</strong> {m.membership_tier}
+              <br />
+              <strong>Started:</strong> {formatDate(m.started_on)}
+              <br />
+              <strong>Ends:</strong> {formatDate(m.ends_on)}
+              <br />
+              <strong>Amount:</strong> {formatUSD(m.total_cents)}
+              <br />
+              <strong>Discount:</strong>{" "}
+              {m.discount_pct ? `${m.discount_pct}%` : "0%"}
+              <br />
+              <strong>Source:</strong> {m.source}
+            </p>
+
+            <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+              Memberships are stored in the <code>membership_txn</code> table.
+            </p>
+
+            <p style={{ marginTop: 16 }}>
+              &larr; <Link to="/account">Back to My Account</Link>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

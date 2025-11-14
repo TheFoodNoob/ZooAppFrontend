@@ -39,7 +39,7 @@ import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
 import Memberships from "./pages/customer/Memberships.jsx";
 import MyAccount from "./pages/customer/MyAccount.jsx";
-import PosReceipt from "./pages/customer/PosReceipt.jsx";
+import AccountPosReceipt from "./pages/customer/AccountPosReceipt.jsx";
 import AccountOrderDetail from "./pages/customer/AccountOrderDetail.jsx";
 import AccountMembershipDetail from "./pages/customer/AccountMembershipDetail.jsx";
 import AccountDonationDetail from "./pages/customer/AccountDonationDetail.jsx";
@@ -898,7 +898,7 @@ export default function App() {
         />
         <Route path="/account" element={<MyAccount />} />
         <Route path="/account/orders/:id" element={<AccountOrderDetail />} />
-        <Route path="/account/pos/:id" element={<PosReceipt />} />
+        <Route path="/account/pos/:id" element={<AccountPosReceipt />} />
         <Route path="/account/memberships/:id" element={<AccountMembershipDetail />} />
         <Route path="/account/donations/:id" element={<AccountDonationDetail />} />
         <Route
