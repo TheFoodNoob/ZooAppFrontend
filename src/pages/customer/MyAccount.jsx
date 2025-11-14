@@ -40,7 +40,6 @@ function formatUSD(cents) {
 }
 
 export default function MyAccount() {
-  // ✅ use the customerToken from AuthContext (NOT the staff token)
   const { user, customerToken } = useAuth();
   const location = useLocation();
 
@@ -49,15 +48,20 @@ export default function MyAccount() {
   const [account, setAccount] = React.useState(null);
   const [orders, setOrders] = React.useState([]);
 
-  // ✅ Always call hooks; guard INSIDE the effect, not before it
+  const [posPurchases, setPosPurchases] = React.useState([]);
+  const [membershipHistory, setMembershipHistory] = React.useState([]);
+  const [donations, setDonations] = React.useState([]);
+
   React.useEffect(() => {
     let cancelled = false;
 
-    // If not logged in as a customer, just clear and stop
     if (!user || !customerToken) {
       setLoading(false);
       setAccount(null);
       setOrders([]);
+      setPosPurchases([]);
+      setMembershipHistory([]);
+      setDonations([]);
       return;
     }
 
@@ -77,35 +81,42 @@ export default function MyAccount() {
       };
 
       try {
-        const [acctRes, ordersRes] = await Promise.allSettled([
+        const [acctRes, ordersRes, historyRes] = await Promise.allSettled([
           fetch(`${api}/api/customer/account`, {
             headers: { Authorization: `Bearer ${customerToken}` },
           }),
           fetch(`${api}/api/customer/orders`, {
             headers: { Authorization: `Bearer ${customerToken}` },
           }),
+          fetch(`${api}/api/customer/history`, {
+            headers: { Authorization: `Bearer ${customerToken}` },
+          }),
         ]);
 
         let acctData = null;
         let orderData = [];
+        let historyData = null;
 
-        if (
-          acctRes.status === "fulfilled" &&
-          acctRes.value.ok
-        ) {
+        if (acctRes.status === "fulfilled" && acctRes.value.ok) {
           acctData = await acctRes.value.json().catch(() => null);
         }
 
-        if (
-          ordersRes.status === "fulfilled" &&
-          ordersRes.value.ok
-        ) {
+        if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
           orderData = await ordersRes.value.json().catch(() => []);
+        }
+
+        if (historyRes.status === "fulfilled" && historyRes.value.ok) {
+          historyData = await historyRes.value.json().catch(() => null);
         }
 
         if (!cancelled) {
           setAccount(acctData || baseAccount);
           setOrders(Array.isArray(orderData) ? orderData : []);
+
+          setPosPurchases(historyData?.pos || []);
+          setMembershipHistory(historyData?.memberships || []);
+          setDonations(historyData?.donations || []);
+
           setLoading(false);
         }
       } catch (e) {
@@ -127,7 +138,7 @@ export default function MyAccount() {
     };
   }, [user, customerToken]);
 
-  // ✅ GUARD AFTER ALL HOOKS ARE DECLARED
+  // Guard AFTER hooks
   if (!user || !customerToken) {
     return (
       <Navigate
@@ -251,7 +262,7 @@ export default function MyAccount() {
               </div>
             )}
 
-            {/* Orders history */}
+            {/* Ticket orders history */}
             <div className="card" style={{ marginTop: 20 }}>
               <h2>Recent ticket orders</h2>
               {orders.length === 0 ? (
@@ -314,6 +325,124 @@ export default function MyAccount() {
                 can be tied to ticket orders and visit history in the database.
               </p>
             </div>
+
+            {/* POS history */}
+            <div className="card" style={{ marginTop: 20 }}>
+              <h2>Gift shop &amp; food purchases</h2>
+              {posPurchases.length === 0 ? (
+                <p style={{ marginTop: 8, fontSize: 14 }}>
+                  We didn&apos;t find any gift shop or food purchases linked to
+                  your account yet. When you use your customer account at the
+                  zoo, those purchases will appear here.
+                </p>
+              ) : (
+                <div style={{ marginTop: 10, overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Receipt #</th>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Membership at sale</th>
+                        <th>Discount</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {posPurchases.map((p) => (
+                        <tr key={p.pos_sale_id}>
+                          <td>{p.pos_sale_id}</td>
+                          <td>{formatDate(p.created_at)}</td>
+                          <td>{p.source}</td>
+                          <td>{p.membership_tier_at_sale || "None"}</td>
+                          <td>
+                            {p.discount_pct
+                              ? `${p.discount_pct}% (-${formatUSD(
+                                  p.discount_cents
+                                )})`
+                              : "—"}
+                          </td>
+                          <td>{formatUSD(p.total_cents)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Membership history */}
+            <div className="card" style={{ marginTop: 20 }}>
+              <h2>Membership history</h2>
+              {membershipHistory.length === 0 ? (
+                <p style={{ marginTop: 8, fontSize: 14 }}>
+                  No membership purchases found yet. When you buy or renew a
+                  membership, the details will appear here.
+                </p>
+              ) : (
+                <div style={{ marginTop: 10, overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Transaction #</th>
+                        <th>Tier</th>
+                        <th>Started</th>
+                        <th>Ends</th>
+                        <th>Discount</th>
+                        <th>Amount</th>
+                        <th>Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {membershipHistory.map((m) => (
+                        <tr key={m.membership_txn_id}>
+                          <td>{m.membership_txn_id}</td>
+                          <td>{m.membership_tier}</td>
+                          <td>{formatDate(m.started_on)}</td>
+                          <td>{formatDate(m.ends_on)}</td>
+                          <td>
+                            {m.discount_pct
+                              ? `${m.discount_pct}%`
+                              : "—"}
+                          </td>
+                          <td>{formatUSD(m.total_cents)}</td>
+                          <td>{m.source}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Optional: donations */}
+            {donations.length > 0 && (
+              <div className="card" style={{ marginTop: 20 }}>
+                <h2>Donations</h2>
+                <div style={{ marginTop: 10, overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Donation #</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Tier</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {donations.map((d) => (
+                        <tr key={d.donation_id}>
+                          <td>{d.donation_id}</td>
+                          <td>{formatDate(d.created_at)}</td>
+                          <td>{formatUSD(d.amount_cents)}</td>
+                          <td>{d.tier_label || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
