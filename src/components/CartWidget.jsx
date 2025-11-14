@@ -17,6 +17,7 @@ export default function CartWidget() {
   const [total, setTotal] = React.useState(0);
 
   const load = React.useCallback(() => {
+    // -------- Tickets (existing logic) --------
     let qty = {};
     let types = [];
     try {
@@ -33,24 +34,67 @@ export default function CartWidget() {
       ])
     );
 
-    const built = Object.entries(qty)
+    const ticketLines = Object.entries(qty)
       .filter(([, q]) => Number(q) > 0)
       .map(([id, q]) => {
-        const meta = tmap.get(String(id)) || { name: "Ticket", price_cents: 0 };
+        const meta =
+          tmap.get(String(id)) || { name: "Ticket", price_cents: 0 };
         const nqty = Number(q);
         return {
+          kind: "ticket",
           id: Number(id),
           name: meta.name,
           qty: nqty,
           price_cents: meta.price_cents,
           line_total_cents: nqty * meta.price_cents,
+          ticket_type_id: Number(id),
         };
       });
 
-    const totalQty = built.reduce((s, l) => s + l.qty, 0);
-    const totalCents = built.reduce((s, l) => s + l.line_total_cents, 0);
+    // -------- POS items (food + gift shop) --------
+    let posQty = {};
+    let posItems = [];
+    try {
+      posQty = JSON.parse(sessionStorage.getItem("posCart") || "{}");
+    } catch {}
+    try {
+      posItems = JSON.parse(sessionStorage.getItem("posItems") || "[]");
+    } catch {}
 
-    setLines(built);
+    const posMap = new Map(
+      (posItems || []).map((p) => [
+        String(p.pos_item_id ?? p.id),
+        { name: p.name, price_cents: Number(p.price_cents || 0) },
+      ])
+    );
+
+    const posLines = Object.entries(posQty)
+      .filter(([, q]) => Number(q) > 0)
+      .map(([id, q]) => {
+        const meta =
+          posMap.get(String(id)) || { name: "Item", price_cents: 0 };
+        const nqty = Number(q);
+        return {
+          kind: "pos",
+          id: `pos-${id}`, // string so it won't clash with ticket ids
+          name: meta.name,
+          qty: nqty,
+          price_cents: meta.price_cents,
+          line_total_cents: nqty * meta.price_cents,
+          pos_item_id: Number(id),
+        };
+      });
+
+    // Combine both
+    const combined = [...ticketLines, ...posLines];
+
+    const totalQty = combined.reduce((s, l) => s + l.qty, 0);
+    const totalCents = combined.reduce(
+      (s, l) => s + l.line_total_cents,
+      0
+    );
+
+    setLines(combined);
     setCount(totalQty);
     setTotal(totalCents);
   }, []);
@@ -58,15 +102,22 @@ export default function CartWidget() {
   React.useEffect(() => {
     load();
 
-    // Updates from our app (Tickets.jsx dispatches this after any change)
+    // Updates from our app (Tickets.jsx / Food / Gift pages dispatch this)
     const onCartChanged = () => load();
     window.addEventListener("cart:changed", onCartChanged);
 
-    // Optional: patch same-tab sessionStorage.setItem so changes outside Tickets also refresh
+    // Patch same-tab sessionStorage.setItem so changes outside Tickets also refresh
     const origSetItem = sessionStorage.setItem.bind(sessionStorage);
     sessionStorage.setItem = function (key, value) {
       origSetItem(key, value);
-      if (key === "cartQty" || key === "ticketTypes") load();
+      if (
+        key === "cartQty" ||
+        key === "ticketTypes" ||
+        key === "posCart" ||
+        key === "posItems"
+      ) {
+        load();
+      }
     };
 
     return () => {
@@ -83,7 +134,9 @@ export default function CartWidget() {
         aria-label="Cart"
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="cart-icon" aria-hidden>🛒</span>
+        <span className="cart-icon" aria-hidden>
+          🛒
+        </span>
         {count > 0 && <span className="cart-badge">{count}</span>}
       </button>
 
@@ -91,7 +144,11 @@ export default function CartWidget() {
         <div className="cart-dropdown" role="dialog" aria-label="Cart">
           <div className="cart-dropdown-head">
             <div className="cart-title">Cart</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} type="button">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setOpen(false)}
+              type="button"
+            >
               Close
             </button>
           </div>
@@ -106,7 +163,9 @@ export default function CartWidget() {
                     <div className="cart-line-name">{l.name}</div>
                     <div className="cart-line-meta">
                       <span className="cart-line-qty">x{l.qty}</span>
-                      <span className="cart-line-price">{centsToUSD(l.line_total_cents)}</span>
+                      <span className="cart-line-price">
+                        {centsToUSD(l.line_total_cents)}
+                      </span>
                     </div>
                   </li>
                 ))}

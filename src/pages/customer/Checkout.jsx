@@ -10,7 +10,7 @@ const toUSD = (cents) =>
     minimumFractionDigits: 2,
   });
 
-/* Helpers to read/write cart from sessionStorage (with localStorage fallback) */
+/* Helpers to read/write cart from storage */
 function readJSON(storage, key, fallback) {
   try {
     const raw = storage.getItem(key);
@@ -19,20 +19,43 @@ function readJSON(storage, key, fallback) {
     return fallback;
   }
 }
+
 function readCartQty() {
   const s = readJSON(sessionStorage, "cartQty", null);
   if (s && typeof s === "object") return s;
   return readJSON(localStorage, "cartQty", {});
 }
+
 function readTicketTypes() {
   const s = readJSON(sessionStorage, "ticketTypes", null);
   if (Array.isArray(s)) return s;
   return readJSON(localStorage, "ticketTypes", []);
 }
+
+// POS helpers
+function readPosCart() {
+  const s = readJSON(sessionStorage, "posCart", null);
+  if (s && typeof s === "object") return s;
+  return readJSON(localStorage, "posCart", {});
+}
+
+function readPosItems() {
+  const s = readJSON(sessionStorage, "posItems", null);
+  if (Array.isArray(s)) return s;
+  return readJSON(localStorage, "posItems", []);
+}
+
 function clearCartEverywhere() {
   try {
+    // tickets
     sessionStorage.setItem("cartQty", "{}");
-    localStorage.setItem("cartQty", "{}"); // safety if an older tab used localStorage
+    localStorage.setItem("cartQty", "{}");
+
+    // POS
+    sessionStorage.setItem("posCart", "{}");
+    localStorage.setItem("posCart", "{}");
+    sessionStorage.setItem("posItems", "[]");
+    localStorage.setItem("posItems", "[]");
   } catch {}
   window.dispatchEvent(new Event("cart:changed"));
 }
@@ -40,7 +63,6 @@ function clearCartEverywhere() {
 export default function Checkout() {
   const nav = useNavigate();
 
-  // Build summary from storage
   const [lines, setLines] = React.useState([]);
   const [totalCents, setTotalCents] = React.useState(0);
 
@@ -56,10 +78,14 @@ export default function Checkout() {
   const [err, setErr] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
+  // Build the visual summary once on mount (and when storage changes)
   React.useEffect(() => {
     const qty = readCartQty();
     const types = readTicketTypes();
+    const posQty = readPosCart();
+    const posItems = readPosItems();
 
+    // ----- tickets -----
     const tmap = new Map(
       (types || []).map((t) => [
         String(t.ticket_type_id ?? t.id),
@@ -67,12 +93,13 @@ export default function Checkout() {
       ])
     );
 
-    const built = Object.entries(qty)
+    const ticketLines = Object.entries(qty)
       .filter(([, q]) => Number(q) > 0)
       .map(([id, q]) => {
         const meta = tmap.get(String(id)) || { name: "Ticket", price_cents: 0 };
         const n = Number(q);
         return {
+          kind: "ticket",
           ticket_type_id: Number(id),
           name: meta.name,
           qty: n,
@@ -81,18 +108,92 @@ export default function Checkout() {
         };
       });
 
-    setLines(built);
-    setTotalCents(built.reduce((s, l) => s + l.line_total_cents, 0));
+    // ----- POS (food + gift) -----
+    const pmap = new Map(
+      (posItems || []).map((p) => [
+        String(p.pos_item_id ?? p.id),
+        { name: p.name, price_cents: Number(p.price_cents || 0) },
+      ])
+    );
 
-    if (built.length === 0) nav("/tickets", { replace: true });
+    const posLines = Object.entries(posQty)
+      .filter(([, q]) => Number(q) > 0)
+      .map(([id, q]) => {
+        const meta = pmap.get(String(id)) || { name: "Item", price_cents: 0 };
+        const n = Number(q);
+        return {
+          kind: "pos",
+          pos_item_id: Number(id),
+          name: meta.name,
+          qty: n,
+          price_cents: meta.price_cents,
+          line_total_cents: n * meta.price_cents,
+        };
+      });
+
+    const allLines = [...ticketLines, ...posLines];
+
+    setLines(allLines);
+    setTotalCents(allLines.reduce((s, l) => s + l.line_total_cents, 0));
+
+    if (allLines.length === 0) {
+      nav("/tickets", { replace: true });
+    }
   }, [nav]);
 
   async function placeOrder() {
     setErr("");
 
-    if (lines.length === 0) return setErr("Your cart is empty.");
+    // Re-read the cart directly from storage so we never send an empty cart
+    const qty = readCartQty();
+    const types = readTicketTypes();
+    const posQty = readPosCart();
+    const posItemsMeta = readPosItems();
+
+    const tmap = new Map(
+      (types || []).map((t) => [
+        String(t.ticket_type_id ?? t.id),
+        { name: t.name, price_cents: Number(t.price_cents || 0) },
+      ])
+    );
+    const pmap = new Map(
+      (posItemsMeta || []).map((p) => [
+        String(p.pos_item_id ?? p.id),
+        { name: p.name, price_cents: Number(p.price_cents || 0) },
+      ])
+    );
+
+    const ticketItems = Object.entries(qty)
+      .filter(([, q]) => Number(q) > 0)
+      .map(([id, q]) => {
+        const meta = tmap.get(String(id)) || { price_cents: 0 };
+        const n = Number(q);
+        return {
+          ticket_type_id: Number(id),
+          quantity: n,
+          price_cents: meta.price_cents,
+        };
+      });
+
+    const posItems = Object.entries(posQty)
+      .filter(([, q]) => Number(q) > 0)
+      .map(([id, q]) => {
+        const meta = pmap.get(String(id)) || { price_cents: 0 };
+        const n = Number(q);
+        return {
+          pos_item_id: Number(id),
+          quantity: n,
+          price_cents: meta.price_cents,
+        };
+      });
+
+    if (ticketItems.length === 0 && posItems.length === 0) {
+      return setErr("Your cart is empty.");
+    }
+
     if (!buyerName.trim()) return setErr("Please enter your name.");
-    if (!/^\S+@\S+\.\S+$/.test(buyerEmail)) return setErr("Please enter a valid email.");
+    if (!/^\S+@\S+\.\S+$/.test(buyerEmail))
+      return setErr("Please enter a valid email.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate))
       return setErr("Please choose a visit date (YYYY-MM-DD).");
 
@@ -108,9 +209,13 @@ export default function Checkout() {
       buyer_name: buyerName,
       buyer_email: buyerEmail,
       visit_date: visitDate,
-      items: lines.map((l) => ({
-        ticket_type_id: l.ticket_type_id,
-        quantity: l.qty, // backend expects 'quantity'
+      items: ticketItems.map((t) => ({
+        ticket_type_id: t.ticket_type_id,
+        quantity: t.quantity,
+      })),
+      pos_items: posItems.map((p) => ({
+        pos_item_id: p.pos_item_id,
+        quantity: p.quantity,
       })),
     };
 
@@ -122,15 +227,24 @@ export default function Checkout() {
         body: JSON.stringify(payload),
       });
 
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "Checkout failed");
+      let j = {};
+      try {
+        j = await r.json();
+      } catch {
+        j = {};
+      }
 
-      // Clear cart everywhere & notify the cart widget
+      if (!r.ok) {
+        throw new Error(j.error || "Checkout failed");
+      }
+
       clearCartEverywhere();
 
-      // ✅ Include the magic token in the redirect so the receipt can load anywhere
       nav(`/order/${j.order_id}?t=${encodeURIComponent(j.lookup_token)}`, {
-        state: j,
+        state: {
+          order: j.order || null,
+          magic: j.lookup_token || "",
+        },
         replace: true,
       });
     } catch (e) {
@@ -149,9 +263,9 @@ export default function Checkout() {
         <div className="panel" style={{ background: "#fff8e1" }}>
           <div style={{ fontWeight: 800, marginBottom: 8 }}>Summary</div>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {lines.map((l) => (
+            {lines.map((l, idx) => (
               <li
-                key={l.ticket_type_id}
+                key={idx}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr auto",
@@ -161,8 +275,17 @@ export default function Checkout() {
               >
                 <span>
                   {l.name} × {l.qty}
+                  {l.kind === "pos" && (
+                    <span
+                      style={{ marginLeft: 6, fontSize: 12, opacity: 0.7 }}
+                    >
+                      (food/gift)
+                    </span>
+                  )}
                 </span>
-                <span style={{ fontWeight: 800 }}>{toUSD(l.line_total_cents)}</span>
+                <span style={{ fontWeight: 800 }}>
+                  {toUSD(l.line_total_cents)}
+                </span>
               </li>
             ))}
           </ul>
@@ -212,7 +335,9 @@ export default function Checkout() {
 
             {/* Demo payment block */}
             <div className="span-2" style={{ marginTop: 8 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>Payment (Demo)</div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                Payment (Demo)
+              </div>
               <div className="two-col" style={{ gap: 8 }}>
                 <div className="span-2">
                   <label>Card number</label>
@@ -251,16 +376,24 @@ export default function Checkout() {
             </div>
           </div>
 
-          {err && <div className="error" style={{ marginTop: 10 }}>{err}</div>}
+          {err && (
+            <div className="error" style={{ marginTop: 10 }}>
+              {err}
+            </div>
+          )}
 
           <div className="row" style={{ marginTop: 12 }}>
-            <button className="btn" type="button" onClick={() => nav("/tickets")}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => nav("/tickets")}
+            >
               Back
             </button>
             <button
               className="btn btn-primary"
               type="button"
-              disabled={busy || lines.length === 0}
+              disabled={busy}
               onClick={placeOrder}
             >
               {busy ? "Placing…" : "Place order"}
@@ -270,8 +403,9 @@ export default function Checkout() {
       </div>
 
       <div className="panel" style={{ marginTop: 12 }}>
-        Payment step: simulated. If you decide to accept real payments later, we can drop in
-        Stripe Checkout and redirect back here on success.
+        Tickets, food, and gift shop items are processed together in this online
+        checkout. Your email receipt includes a breakdown of everything in your
+        order.
       </div>
     </div>
   );

@@ -301,8 +301,8 @@ export default function MyAccount() {
                           </td>
                           <td>
                             <Link
-                              to="/orders"
-                              state={{ seedOrderId: o.order_id }}
+                              to={`/account/orders/${o.order_id}`}
+                              state={{ order: o }}
                             >
                               View details
                             </Link>
@@ -346,6 +346,7 @@ export default function MyAccount() {
                         <th>Membership at sale</th>
                         <th>Discount</th>
                         <th>Total</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -363,6 +364,14 @@ export default function MyAccount() {
                               : "—"}
                           </td>
                           <td>{formatUSD(p.total_cents)}</td>
+                          <td>
+                            <Link
+                              to={`/account/pos/${p.pos_sale_id}`}
+                              state={{ pos: p }}
+                            >
+                              View details
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -391,6 +400,7 @@ export default function MyAccount() {
                         <th>Discount</th>
                         <th>Amount</th>
                         <th>Source</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -407,6 +417,14 @@ export default function MyAccount() {
                           </td>
                           <td>{formatUSD(m.total_cents)}</td>
                           <td>{m.source}</td>
+                          <td>
+                            <Link
+                              to={`/account/memberships/${m.membership_txn_id}`}
+                              state={{ membership: m }}
+                            >
+                              View details
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -427,6 +445,7 @@ export default function MyAccount() {
                         <th>Date</th>
                         <th>Amount</th>
                         <th>Tier</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -436,6 +455,14 @@ export default function MyAccount() {
                           <td>{formatDate(d.created_at)}</td>
                           <td>{formatUSD(d.amount_cents)}</td>
                           <td>{d.tier_label || "—"}</td>
+                          <td>
+                            <Link
+                              to={`/account/donations/${d.donation_id}`}
+                              state={{ donation: d }}
+                            >
+                              View details
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

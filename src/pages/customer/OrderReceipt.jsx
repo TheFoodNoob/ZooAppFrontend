@@ -14,17 +14,17 @@ export default function OrderReceipt() {
   const { id } = useParams();
   const loc = useLocation();
 
-  // Order may be passed in via navigate(..., { state: { order } })
+  // Order may be passed in via navigate(..., { state: { order, magic } })
   const [order, setOrder] = React.useState(loc.state?.order || null);
 
-  // For this page we treat `t` as the **magic lookup token**, not a JWT
-  const [magic, setMagic] = React.useState(() => {
+  // For this page we treat `t` as the magic lookup token (JWT)
+  const [magic] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     return loc.state?.magic || params.get("t") || "";
   });
 
   const [err, setErr] = React.useState("");
-  const [note, setNote] = React.useState("");
+  const [note] = React.useState("");
 
   // Load order from API when we have a magic token but no order yet
   React.useEffect(() => {
@@ -53,9 +53,12 @@ export default function OrderReceipt() {
       <div className="page">
         <h1>Order #{id}</h1>
         <div className="error">
-          Missing access token. Please use the link from your email, or visit the{" "}
-          <Link to="/orders">“Find my order”</Link> page and enter your order
-          number and verification code.
+          Missing access token. Please use the link from your email, or visit
+          the{" "}
+          <Link to="/orders">
+            “Find my order”
+          </Link>{" "}
+          page and enter your order number and verification code.
         </div>
         <Link to="/tickets">Back to tickets</Link>
       </div>
@@ -82,6 +85,7 @@ export default function OrderReceipt() {
   }
 
   const refunded = String(order.status || "").toLowerCase() === "refunded";
+  const posItems = Array.isArray(order.pos_items) ? order.pos_items : [];
 
   return (
     <div
@@ -126,25 +130,74 @@ export default function OrderReceipt() {
         </p>
 
         <div style={{ marginTop: "1rem", textAlign: "left" }}>
-          <h3 style={{ marginBottom: "0.25rem" }}>Items</h3>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {order.items.map((it, i) => (
-              <li
-                key={i}
+          <h3 style={{ marginBottom: "0.25rem" }}>Tickets</h3>
+          {order.items && order.items.length > 0 ? (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {order.items.map((it, i) => (
+                <li
+                  key={i}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    padding: "6px 0",
+                    borderBottom: "1px dashed #eadfae",
+                  }}
+                >
+                  <span>
+                    {it.name} × {it.quantity}
+                  </span>
+                  <span>{toUSD(it.line_total_cents)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ margin: "4px 0 0", color: "#555" }}>
+              No admission tickets in this order.
+            </p>
+          )}
+
+          {posItems.length > 0 && (
+            <>
+              <h3
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  padding: "6px 0",
-                  borderBottom: "1px dashed #eadfae",
+                  marginTop: "1rem",
+                  marginBottom: "0.25rem",
                 }}
               >
-                <span>
-                  {it.name} × {it.quantity}
-                </span>
-                <span>{toUSD(it.line_total_cents)}</span>
-              </li>
-            ))}
-          </ul>
+                Food &amp; gift shop items
+              </h3>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {posItems.map((it, i) => (
+                  <li
+                    key={`pos-${i}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
+                      padding: "6px 0",
+                      borderBottom: "1px dashed #eadfae",
+                    }}
+                  >
+                    <span>
+                      {it.name} × {it.quantity}
+                      {it.category && (
+                        <span
+                          style={{
+                            marginLeft: 6,
+                            fontSize: 12,
+                            opacity: 0.7,
+                          }}
+                        >
+                          ({it.category})
+                        </span>
+                      )}
+                    </span>
+                    <span>{toUSD(it.line_total_cents)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           <div
             style={{
               display: "grid",

@@ -39,6 +39,10 @@ import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
 import Memberships from "./pages/customer/Memberships.jsx";
 import MyAccount from "./pages/customer/MyAccount.jsx";
+import PosReceipt from "./pages/customer/PosReceipt.jsx";
+import AccountOrderDetail from "./pages/customer/AccountOrderDetail.jsx";
+import AccountMembershipDetail from "./pages/customer/AccountMembershipDetail.jsx";
+import AccountDonationDetail from "./pages/customer/AccountDonationDetail.jsx";
 
 /* Used for both customer email-verify and the public order OTP verify step */
 import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
@@ -46,6 +50,9 @@ import VerifySent from "./pages/customer/VerifySent.jsx";
 import Checkout from "./pages/customer/Checkout.jsx";
 import OrderReceipt from "./pages/customer/OrderReceipt.jsx";
 import OrderLookup from "./pages/customer/OrderLookup.jsx";
+import GiftShop from "./pages/customer/GiftShop.jsx";
+import Food from "./pages/customer/Food.jsx";
+
 
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
@@ -666,6 +673,24 @@ function Nav() {
           Tickets
         </NavLink>
       </li>
+      <li>
+        <NavLink
+          to="/food"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Food
+        </NavLink>
+      </li>
+      <li>
+        <NavLink
+          to="/gift-shop"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Gift Shop
+        </NavLink>
+      </li>
 
       {/* Always show My Account; route is protected so
           logged-out users are redirected to /login */}
@@ -843,6 +868,8 @@ export default function App() {
         <Route path="/orders" element={<OrderLookup />} />
         <Route path="/orders/verify" element={<VerifyFromToken />} />
         <Route path="/order/:id" element={<OrderReceipt />} />
+        <Route path="/food" element={<Food />} />
+        <Route path="/gift-shop" element={<GiftShop />} />
 
         {/* Password/verify (public) */}
         <Route path="/forgot" element={<Forgot />} />
@@ -870,6 +897,10 @@ export default function App() {
           }
         />
         <Route path="/account" element={<MyAccount />} />
+        <Route path="/account/orders/:id" element={<AccountOrderDetail />} />
+        <Route path="/account/pos/:id" element={<PosReceipt />} />
+        <Route path="/account/memberships/:id" element={<AccountMembershipDetail />} />
+        <Route path="/account/donations/:id" element={<AccountDonationDetail />} />
         <Route
           path="/staff/login"
           element={
