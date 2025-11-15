@@ -387,6 +387,9 @@ function KeeperDash() {
           <li>
             <Link to="/feedings">view feeding logs</Link>
           </li>
+          <li>
+            <Link to="/vetvisit">view vet appointments</Link>
+          </li>
         </ul>
       </div>
     </CardPage>
@@ -1108,7 +1111,7 @@ export default function App() {
         <Route
           path="/vetvisit/:id/edit"
           element={
-            <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+            <ProtectedRoute roles={["admin", "vet"]}>
               <VetVisitEdit />
             </ProtectedRoute>
           }
