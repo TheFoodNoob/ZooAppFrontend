@@ -3,19 +3,20 @@ import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../../api";
 import fetchAuth from "../../utils/fetchAuth";
 import { useAuth } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
 export default function VetVisitsPage() {
   const [vetVisits, setVetVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const {token} = useAuth();
+  const { token } = useAuth();
+
   // Fetch vet visits on mount
   useEffect(() => {
     const fetchVetVisits = async () => {
       setLoading(true);
       setError("");
       try {
-        
         const res = await fetchAuth(`${api}/api/vetvisit`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -50,69 +51,111 @@ export default function VetVisitsPage() {
   }, [vetVisits, search]);
 
   return (
-   <div>
-  <h1>Vet Visits</h1>
+    <div>
+      <h1>Vet Visits</h1>
 
-  <input
-    type="text"
-    placeholder="Search by reason, diagnosis, animal ID, vet ID..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-  />
+      <input
+        type="text"
+        placeholder="Search by reason, diagnosis, animal ID, vet ID..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
-  {loading && <p>Loading...</p>}
-  {error && <p>{error}</p>}
+      {loading && <p>Loading...</p>}
+      {error && <p>{error}</p>}
 
-  {!loading && !error && (
-    <>
-      {filteredVisits.length > 0 ? (
-        filteredVisits.map((v) => (
-          <div key={v.id} className="card card--wide">
-            <div className="two-col">
-              <div>
-                <label>Visit ID</label>
-                <div>{v.id}</div>
+      {!loading && !error && (
+        <>
+          {filteredVisits.length > 0 ? (
+            filteredVisits.map((v) => (
+              <div key={v.id} className="card card--wide">
+                <div className="two-col">
+                  <div>
+                    <label>Visit ID</label>
+                    <div>{v.id}</div>
+                  </div>
+                  <div>
+                    <label>Animal ID</label>
+                    <div>{v.animal_id}</div>
+                  </div>
+                  <div>
+                    <label>Animal Name</label>
+                    <div>{v.name}</div>
+                  </div>
+                  <div>
+                    <label>Species</label>
+                    <div>{v.species_name}</div>
+                  </div>
+                  <div>
+                    <label>Scientific Name</label>
+                    <div>
+                      <i>{v.sf_name}</i>
+                    </div>
+                  </div>
+                  <div>
+                    <label>Visit Date</label>
+                    <div>{new Date(v.visit_date).toLocaleDateString()}</div>
+                  </div>
+                  <div>
+                    <label>Reason</label>
+                    <div>{v.reason}</div>
+                  </div>
+                  <div>
+                    <label>Diagnosis</label>
+                    <div>{v.diagnosis}</div>
+                  </div>
+                  <div>
+                    <label>Vet User ID</label>
+                    <div>{v.vet_user_id}</div>
+                  </div>
+                </div>
+
+                {/* CRUD BUTTONS */}
+                <div className="crud-buttons" style={{ marginTop: "1rem" }}>
+                  {/* VIEW */}
+                  <Link to={`/vetvisit/${v.id}`}>
+                    <button className="btn btn-primary">
+                      View
+                    </button>
+                  </Link>
+
+                  {/* EDIT */}
+                  <Link to={`/vetvisit/${v.id}/edit`}>
+                    <button className="btn btn-warning"
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Edit
+                  </button>
+                    </Link>
+                  {/* DELETE */}
+                  <button
+                    className="btn btn-danger"
+                    style={{ marginLeft: "0.5rem" }}
+                    onClick={async () => {
+                      if (!window.confirm("Delete this vet visit?")) return;
+
+                      const res = await fetchAuth(`${api}/api/vetvisit/${v.id}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+
+                      if (res.ok) {
+                        setVetVisits((prev) => prev.filter((x) => x.id !== v.id));
+                      } else {
+                        alert("Failed to delete visit.");
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div>
-                <label>Animal ID</label>
-                <div>{v.animal_id}</div>
-              </div>
-              <div>
-                <label>Animal Name</label>
-                <div>{v.name}</div>
-              </div>
-              <div>
-                <label>Species</label>
-                <div>{v.species_name}</div>
-              </div>
-              <div>
-                <label>Scientific Name</label>
-                <div><i>{v.sf_name}</i></div>
-              </div>
-              <div>
-                <label>Visit Date</label>
-                <div>{new Date(v.visit_date).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <label>Reason</label>
-                <div>{v.reason}</div>
-              </div>
-              <div>
-                <label>Diagnosis</label>
-                <div>{v.diagnosis}</div>
-              </div>
-              <div>
-                <label>Vet User ID</label>
-                <div>{v.vet_user_id}</div>
-              </div>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p>No vet visits found.</p>
+            ))
+          ) : (
+            <p>No vet visits found.</p>
+          )}
+        </>
       )}
-    </>
-  )}
-</div>
-);
+    </div>
+  );
 }
