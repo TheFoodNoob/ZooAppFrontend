@@ -38,6 +38,8 @@ import Reset from "./pages/customer/Reset.jsx";
 import StaffForgot from "./pages/employee/StaffForgot.jsx";
 import StaffReset from "./pages/employee/StaffReset.jsx";
 import Memberships from "./pages/customer/Memberships.jsx";
+import MembershipCheckout from "./pages/customer/MembershipCheckout.jsx";
+import MembershipConfirmation from "./pages/customer/MembershipConfirmation.jsx";
 import MyAccount from "./pages/customer/MyAccount.jsx";
 import AccountPosReceipt from "./pages/customer/AccountPosReceipt.jsx";
 import AccountOrderDetail from "./pages/customer/AccountOrderDetail.jsx";
@@ -862,6 +864,14 @@ export default function App() {
         <Route path="/request" element={<RequestReceived />} />
         <Route path="scheduleEvents" element={<ZooScheduler />} />
         <Route path="/memberships" element={<Memberships />} />
+        <Route
+          path="/memberships/checkout/:tierId"
+          element={<MembershipCheckout />}
+        />
+        <Route
+          path="/memberships/confirmation"
+          element={<MembershipConfirmation />}
+        />
 
         {/* Checkout & order self-service (no staff login) */}
         <Route path="/checkout" element={<Checkout />} />

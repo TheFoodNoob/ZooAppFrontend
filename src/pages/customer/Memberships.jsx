@@ -1,8 +1,9 @@
 // src/pages/customer/Memberships.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
 
-const TIERS = [
+export const MEMBERSHIP_TIERS = [
   {
     id: "individual",
     name: "Individual",
@@ -42,6 +43,28 @@ const TIERS = [
 ];
 
 export default function Memberships() {
+  const { customerToken } = useAuth();
+  const navigate = useNavigate();
+
+  function handleJoin(tierId) {
+    // If they're not logged in, send to login first
+    if (!customerToken) {
+      navigate("/login", {
+        state: {
+          from: "/memberships",
+          flash: {
+            message:
+              "Please log in or create an account before purchasing a membership.",
+          },
+        },
+      });
+      return;
+    }
+
+    // Logged in → go to checkout/review page
+    navigate(`/memberships/checkout/${tierId}`);
+  }
+
   return (
     <div className="page">
       <div className="container">
@@ -61,18 +84,17 @@ export default function Memberships() {
           </p>
 
           <div className="membership-links">
-            {/* Update these paths if your customer auth routes are different */}
             <Link to="/login" className="btn btn-ghost">
-                Customer Login
+              Customer Login
             </Link>
             <Link to="/register" className="btn btn-ghost">
-                Create Account
+              Create Account
             </Link>
           </div>
         </div>
 
         <div className="membership-grid">
-          {TIERS.map((tier) => (
+          {MEMBERSHIP_TIERS.map((tier) => (
             <section key={tier.id} className="card membership-card">
               <div className="membership-head">
                 <h2>{tier.name}</h2>
@@ -91,12 +113,7 @@ export default function Memberships() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => {
-                    // Simulated flow for now
-                    alert(
-                      "To purchase this membership, sign in with your customer account.\n\nIn a full version, this button would start a checkout flow tied to your account."
-                    );
-                  }}
+                  onClick={() => handleJoin(tier.id)}
                 >
                   Join with zoo account
                 </button>
