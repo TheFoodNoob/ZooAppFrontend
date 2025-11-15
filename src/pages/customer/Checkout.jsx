@@ -154,7 +154,9 @@ export default function Checkout() {
       if (user.email) {
         setBuyerEmail((prev) => prev || user.email || "");
       }
-      const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+      const fullName = `${user.first_name || ""} ${
+        user.last_name || ""
+      }`.trim();
       if (fullName) {
         setBuyerName((prev) => prev || fullName);
       }
@@ -346,16 +348,54 @@ export default function Checkout() {
     }
   }
 
-  // Decide which numbers to show in the summary:
-  const subtotalDisplay = quote?.subtotal_cents ?? totalCents;
-  const discountDisplay =
+  const effectiveEmailForInput = user?.email || buyerEmail;
+
+  // ---- Membership savings breakdown for the summary ----
+  const originalSubtotal = totalCents; // full cart (tickets + POS) before membership
+
+  const subtotalAfterFree =
+    typeof quote?.subtotal_cents === "number"
+      ? quote.subtotal_cents
+      : originalSubtotal;
+
+  const percentDiscountCents =
     typeof quote?.discount_cents === "number" ? quote.discount_cents : 0;
-  const totalDisplay =
+
+  const finalTotalCents =
     typeof quote?.total_cents === "number"
       ? quote.total_cents
-      : subtotalDisplay - (discountDisplay > 0 ? discountDisplay : 0);
+      : originalSubtotal;
 
-  const effectiveEmailForInput = user?.email || buyerEmail;
+  // Free admissions = difference between original subtotal and subtotal after free tickets
+  const freeAdmissionCents = Math.max(
+    0,
+    originalSubtotal - subtotalAfterFree
+  );
+
+  const memberSavingsCents = Math.max(
+    0,
+    freeAdmissionCents + percentDiscountCents
+  );
+
+  const membershipPercent =
+    typeof quote?.discount_pct === "number" ? quote.discount_pct : null;
+
+  const membershipTier =
+    quote?.membership_tier_at_sale ||
+    quote?.membership_free?.membership_tier ||
+    null;
+
+  let freeAdmissionLabel = null;
+  if (freeAdmissionCents > 0 && membershipTier) {
+    const t = membershipTier.toLowerCase();
+    if (t.includes("individual")) {
+      freeAdmissionLabel = "Member adult ticket included";
+    } else if (t.includes("family") || t.includes("supporter")) {
+      freeAdmissionLabel = "Member family admission included";
+    } else {
+      freeAdmissionLabel = "Member admission included";
+    }
+  }
 
   return (
     <div className="page">
@@ -404,15 +444,26 @@ export default function Checkout() {
               rowGap: 4,
             }}
           >
-            {/* Subtotal (before membership discount) */}
+            {/* Subtotal before membership savings */}
             <span>Subtotal</span>
-            <span>{toUSD(subtotalDisplay)}</span>
+            <span>{toUSD(originalSubtotal)}</span>
 
-            {/* Membership discount row, only if there is one */}
-            {quote && discountDisplay > 0 && (
+            {/* Membership free admissions */}
+            {freeAdmissionCents > 0 && freeAdmissionLabel && (
               <>
-                <span>Membership discount ({quote.discount_pct}%)</span>
-                <span>-{toUSD(discountDisplay)}</span>
+                <span>{freeAdmissionLabel}</span>
+                <span>-{toUSD(freeAdmissionCents)}</span>
+              </>
+            )}
+
+            {/* Membership % discount */}
+            {percentDiscountCents > 0 && (
+              <>
+                <span>
+                  Membership discount
+                  {membershipPercent != null ? ` (${membershipPercent}%)` : ""}
+                </span>
+                <span>-{toUSD(percentDiscountCents)}</span>
               </>
             )}
 
@@ -421,14 +472,14 @@ export default function Checkout() {
               Estimated total
             </span>
             <span style={{ marginTop: 4, fontWeight: 900 }}>
-              {toUSD(totalDisplay)}
+              {toUSD(finalTotalCents)}
             </span>
           </div>
 
-          {quote && discountDisplay > 0 ? (
+          {quote && memberSavingsCents > 0 ? (
             <p style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
               As a member, you save{" "}
-              <strong>{toUSD(discountDisplay)}</strong> on this order.
+              <strong>{toUSD(memberSavingsCents)}</strong> on this order.
             </p>
           ) : (
             <p style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
@@ -455,9 +506,7 @@ export default function Checkout() {
               <input
                 value={effectiveEmailForInput}
                 onChange={
-                  user
-                    ? undefined
-                    : (e) => setBuyerEmail(e.target.value)
+                  user ? undefined : (e) => setBuyerEmail(e.target.value)
                 }
                 readOnly={!!user}
                 placeholder="jane@example.com"

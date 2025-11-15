@@ -13,8 +13,9 @@ export const MEMBERSHIP_TIERS = [
     price_cents: 7500,
     tagline: "Best for frequent solo visitors.",
     perks: [
-      "Unlimited daytime admission for 1 adult",
-      "10% off food and gift shop purchases",
+      "Free daytime admission for 1 named adult on every visit",
+      "Unlimited free admission for infants in your party",
+      "10% off additional tickets, food, and gift shop purchases",
       "Member-only email offers and previews",
       "Discounts on select special events",
     ],
@@ -26,8 +27,9 @@ export const MEMBERSHIP_TIERS = [
     price_cents: 14500,
     tagline: "Perfect for parents and kids.",
     perks: [
-      "Unlimited daytime admission for 2 adults + up to 4 children",
-      "10% off food, gift shop, and stroller rentals",
+      "Free daytime admission for 2 adults + up to 4 children on every visit",
+      "Unlimited free admission for infants in your party",
+      "10% off additional tickets, food, gift shop, and stroller rentals",
       "Early access to select member mornings",
       "Discounts on camps and birthday packages",
     ],
@@ -39,7 +41,8 @@ export const MEMBERSHIP_TIERS = [
     price_cents: 25000,
     tagline: "For animal lovers who want to give more.",
     perks: [
-      "All Family benefits",
+      "All Family benefits, plus 2 extra guest admissions on every visit",
+      "15% off additional tickets, food, gift shop, and stroller rentals",
       "Invites to select behind-the-scenes experiences",
       "Recognition in our annual supporter listing",
       "Exclusive conservation updates",
