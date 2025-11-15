@@ -38,6 +38,17 @@ function formatUSD(cents) {
     minimumFractionDigits: 2,
   });
 }
+const PLAN_LABELS = {
+  individual: "Individual",
+  family: "Family",
+  supporter: "Zoo Supporter",
+};
+
+const PLAN_PRICES = {
+  individual: 7500,  // $75
+  family: 14500,     // $145
+  supporter: 25000,  // $250
+};
 
 const INITIAL_ROWS = 5;
 
@@ -49,7 +60,6 @@ export default function MyAccount() {
   const [error, setError] = React.useState("");
   const [account, setAccount] = React.useState(null);
   const [orders, setOrders] = React.useState([]);
-
   const [posPurchases, setPosPurchases] = React.useState([]);
   const [membershipHistory, setMembershipHistory] = React.useState([]);
   const [donations, setDonations] = React.useState([]);
@@ -63,11 +73,34 @@ export default function MyAccount() {
   // total membership savings (in cents) from the tiny endpoint
   const [membershipSavings, setMembershipSavings] = React.useState(0);
 
+  const [upgradeConfirm, setUpgradeConfirm] = React.useState(null);
+  // shape: { fromTier, toTier, priceCents }
+
+  const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [upgradeError, setUpgradeError] = React.useState("");
+
   // animated display value for savings badge
   const [displaySavings, setDisplaySavings] = React.useState(0);
 
-  React.useEffect(() => {
-    let cancelled = false;
+  // cancel membership UI state
+  const [cancelLoading, setCancelLoading] = React.useState(false);
+  const [cancelError, setCancelError] = React.useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = React.useState(false);
+
+  // --------------------------------------------------
+  // Shared loader so we can call it after cancellation
+  // --------------------------------------------------
+  const loadAccountData = React.useCallback(async () => {
+    const baseAccount = {
+      name:
+        user?.full_name ||
+        [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+        user?.email,
+      email: user?.email,
+      membership_tier: user?.membership_tier || null,
+      membership_status: user?.membership_tier ? "active" : "none",
+      member_since: user?.member_since || null,
+    };
 
     if (!user || !customerToken) {
       setLoading(false);
@@ -80,98 +113,73 @@ export default function MyAccount() {
       return;
     }
 
-    async function load() {
-      setLoading(true);
-      setError("");
+    setLoading(true);
+    setError("");
 
-      const baseAccount = {
-        name:
-          user.full_name ||
-          [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-          user.email,
-        email: user.email,
-        membership_tier: user.membership_tier || null,
-        membership_status: user.membership_tier ? "active" : "none",
-        member_since: user.member_since || null,
-      };
+    try {
+      const [acctRes, ordersRes, historyRes, savingsRes] =
+        await Promise.allSettled([
+          fetch(`${api}/api/customer/account`, {
+            headers: { Authorization: `Bearer ${customerToken}` },
+          }),
+          fetch(`${api}/api/customer/orders`, {
+            headers: { Authorization: `Bearer ${customerToken}` },
+          }),
+          fetch(`${api}/api/customer/history`, {
+            headers: { Authorization: `Bearer ${customerToken}` },
+          }),
+          // tiny endpoint that returns { total_savings_cents: number }
+          fetch(`${api}/api/customer/membership-savings`, {
+            headers: { Authorization: `Bearer ${customerToken}` },
+          }),
+        ]);
 
-      try {
-        const [acctRes, ordersRes, historyRes, savingsRes] =
-          await Promise.allSettled([
-            fetch(`${api}/api/customer/account`, {
-              headers: { Authorization: `Bearer ${customerToken}` },
-            }),
-            fetch(`${api}/api/customer/orders`, {
-              headers: { Authorization: `Bearer ${customerToken}` },
-            }),
-            fetch(`${api}/api/customer/history`, {
-              headers: { Authorization: `Bearer ${customerToken}` },
-            }),
-            // tiny endpoint that returns { total_savings_cents: number }
-            fetch(`${api}/api/customer/membership-savings`, {
-              headers: { Authorization: `Bearer ${customerToken}` },
-            }),
-          ]);
+      let acctData = null;
+      let orderData = [];
+      let historyData = null;
+      let savingsData = null;
 
-        let acctData = null;
-        let orderData = [];
-        let historyData = null;
-        let savingsData = null;
-
-        if (acctRes.status === "fulfilled" && acctRes.value.ok) {
-          acctData = await acctRes.value.json().catch(() => null);
-        }
-
-        if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
-          orderData = await ordersRes.value.json().catch(() => []);
-        }
-
-        if (historyRes.status === "fulfilled" && historyRes.value.ok) {
-          historyData = await historyRes.value.json().catch(() => null);
-        }
-
-        if (savingsRes.status === "fulfilled" && savingsRes.value.ok) {
-          savingsData = await savingsRes.value.json().catch(() => null);
-        }
-
-        if (!cancelled) {
-          setAccount(acctData || baseAccount);
-          setOrders(Array.isArray(orderData) ? orderData : []);
-
-          setPosPurchases(historyData?.pos || []);
-          setMembershipHistory(historyData?.memberships || []);
-          setDonations(historyData?.donations || []);
-
-          setMembershipSavings(
-            Number(savingsData?.total_savings_cents || 0)
-          );
-
-          // reset visible-row limits whenever data is reloaded
-          setTicketLimit(INITIAL_ROWS);
-          setPosLimit(INITIAL_ROWS);
-          setMembershipLimit(INITIAL_ROWS);
-          setDonationLimit(INITIAL_ROWS);
-
-          setLoading(false);
-        }
-      } catch (e) {
-        console.error("my account load error:", e);
-        if (!cancelled) {
-          setAccount(baseAccount);
-          setError(
-            "We couldn't load all of your account details. Some sections may be limited."
-          );
-          setLoading(false);
-        }
+      if (acctRes.status === "fulfilled" && acctRes.value.ok) {
+        acctData = await acctRes.value.json().catch(() => null);
       }
+      if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+        orderData = await ordersRes.value.json().catch(() => []);
+      }
+      if (historyRes.status === "fulfilled" && historyRes.value.ok) {
+        historyData = await historyRes.value.json().catch(() => null);
+      }
+      if (savingsRes.status === "fulfilled" && savingsRes.value.ok) {
+        savingsData = await savingsRes.value.json().catch(() => null);
+      }
+
+      setAccount(acctData || baseAccount);
+      setOrders(Array.isArray(orderData) ? orderData : []);
+      setPosPurchases(historyData?.pos || []);
+      setMembershipHistory(historyData?.memberships || []);
+      setDonations(historyData?.donations || []);
+      setMembershipSavings(Number(savingsData?.total_savings_cents || 0));
+
+      // reset visible-row limits whenever data is reloaded
+      setTicketLimit(INITIAL_ROWS);
+      setPosLimit(INITIAL_ROWS);
+      setMembershipLimit(INITIAL_ROWS);
+      setDonationLimit(INITIAL_ROWS);
+
+      setLoading(false);
+    } catch (e) {
+      console.error("my account load error:", e);
+      setAccount(baseAccount);
+      setError(
+        "We couldn't load all of your account details. Some sections may be limited."
+      );
+      setLoading(false);
     }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
   }, [user, customerToken]);
+
+  // initial load
+  React.useEffect(() => {
+    loadAccountData();
+  }, [loadAccountData]);
 
   // animate the savings value whenever membershipSavings changes
   React.useEffect(() => {
@@ -189,20 +197,16 @@ export default function MyAccount() {
     function step(now) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-
       // ease-out cubic for smoother ending
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(startValue + (target - startValue) * eased);
-
       setDisplaySavings(current);
-
       if (progress < 1) {
         frameId = requestAnimationFrame(step);
       }
     }
 
     frameId = requestAnimationFrame(step);
-
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
@@ -210,13 +214,7 @@ export default function MyAccount() {
 
   // Guard AFTER hooks
   if (!user || !customerToken) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location }}
-      />
-    );
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   const membershipStatus = account?.membership_status || "none";
@@ -225,9 +223,7 @@ export default function MyAccount() {
   // current membership cost (for progress bar) – use latest membership txn if present
   const currentMembershipTxn = membershipHistory[0] || null;
   const membershipCostCents =
-    currentMembershipTxn?.total_cents ??
-    currentMembershipTxn?.price_cents ??
-    0;
+    currentMembershipTxn?.total_cents ?? currentMembershipTxn?.price_cents ?? 0;
 
   let membershipProgressPct = null;
   if (membershipCostCents > 0 && membershipSavings > 0) {
@@ -254,6 +250,39 @@ export default function MyAccount() {
     fontSize: 14,
     textDecoration: "underline",
   };
+
+  // --------------------------------------------------
+  // Cancel membership handler
+  // --------------------------------------------------
+  async function handleCancelMembership() {
+  setCancelError("");
+  setCancelLoading(true);
+
+  try {
+    const res = await fetch(`${api}/api/customer/memberships/cancel`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${customerToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to cancel membership");
+    }
+
+    // On success: hide the confirmation and reload account data
+    await loadAccountData();
+    setShowCancelConfirm(false);
+  } catch (e) {
+    console.error("cancel membership error:", e);
+    setCancelError(e.message || "Failed to cancel membership");
+  } finally {
+    setCancelLoading(false);
+  }
+}
 
   return (
     <div className="page">
@@ -359,7 +388,6 @@ export default function MyAccount() {
                     >
                       TOTAL SAVED WITH YOUR MEMBERSHIP
                     </span>
-
                     <span
                       style={{
                         fontSize: 32,
@@ -418,10 +446,7 @@ export default function MyAccount() {
                           }}
                         >
                           Saving toward your{" "}
-                          {(
-                            account?.membership_tier ||
-                            "membership"
-                          ).toLowerCase()}{" "}
+                          {(account?.membership_tier || "membership").toLowerCase()}{" "}
                           cost of {formatUSD(membershipCostCents || 0)}.
                         </div>
                       </div>
@@ -453,6 +478,7 @@ export default function MyAccount() {
                     programs.
                   </li>
                 </ul>
+
                 <p
                   style={{
                     marginTop: 10,
@@ -464,12 +490,99 @@ export default function MyAccount() {
                   ticket orders, showing how long-term customer relationships
                   can be modeled in the database.
                 </p>
+
+                {/* primary cancel button -> shows inline confirmation */}
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ marginTop: 16 }}
+                  onClick={() => {
+                    setCancelError("");
+                    setShowCancelConfirm(true);
+                  }}
+                  disabled={cancelLoading}
+                >
+                  Cancel membership
+                </button>
+
+                <p
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
+                  (Demo only – cancels future benefits but does not process refunds.)
+                </p>
+
+                {/* inline confirmation popup */}
+                {showCancelConfirm && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      background: "#fff6f0",
+                      border: "1px solid #f0b68c",
+                      maxWidth: 420,
+                    }}
+                  >
+                    <div style={{ fontSize: 14, marginBottom: 8 }}>
+                      Are you sure you want to cancel your membership? This demo does not
+                      process refunds, but it will stop your future membership benefits.
+                    </div>
+
+                    {cancelError && (
+                      <div className="error" style={{ marginTop: 4 }}>
+                        {cancelError}
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        marginTop: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleCancelMembership}
+                        disabled={cancelLoading}
+                      >
+                        {cancelLoading ? "Cancelling…" : "Yes, cancel membership"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{
+                          background: "transparent",
+                          color: "var(--link-color, #237342)",
+                          border: "none",
+                          textDecoration: "underline",
+                          paddingInline: 0,
+                        }}
+                        onClick={() => {
+                          setShowCancelConfirm(false);
+                          setCancelError("");
+                        }}
+                        disabled={cancelLoading}
+                      >
+                        Keep membership
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Ticket orders history */}
             <div className="card" style={{ marginTop: 20 }}>
               <h2>Recent ticket orders</h2>
+
               {orders.length === 0 ? (
                 <p style={{ marginTop: 8, fontSize: 14 }}>
                   We didn't find any ticket orders linked to your account yet.
@@ -495,7 +608,6 @@ export default function MyAccount() {
                           let ticketSubtotalCents;
                           let ticketDiscountCents;
                           let ticketFinalCents;
-
                           const discountPct = Number(o.discount_pct || 0);
 
                           if (o.ticket_subtotal_cents != null) {
@@ -514,7 +626,6 @@ export default function MyAccount() {
                               o.subtotal_cents != null
                                 ? Number(o.subtotal_cents)
                                 : Number(o.total_cents || 0);
-
                             ticketDiscountCents = 0;
                             ticketFinalCents = ticketSubtotalCents;
 
@@ -597,6 +708,7 @@ export default function MyAccount() {
             {/* POS history */}
             <div className="card" style={{ marginTop: 20 }}>
               <h2>Gift shop &amp; food purchases</h2>
+
               {posPurchases.length === 0 ? (
                 <p style={{ marginTop: 8, fontSize: 14 }}>
                   We didn&apos;t find any gift shop or food purchases linked to
@@ -673,6 +785,7 @@ export default function MyAccount() {
             {/* Membership history */}
             <div className="card" style={{ marginTop: 20 }}>
               <h2>Membership history</h2>
+
               {membershipHistory.length === 0 ? (
                 <p style={{ marginTop: 8, fontSize: 14 }}>
                   No membership purchases found yet. When you buy or renew a
