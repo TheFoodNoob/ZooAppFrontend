@@ -78,10 +78,12 @@ import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 import RolePage from "./pages/employee/EmployeeByRole.jsx";
 import VetVisitsPage from "./pages/employee/VetVisit.jsx";
+import VetVisitEdit from "./pages/employee/VisitEdit.jsx";
 import TicketStats from "./pages/employee/Tickets.jsx";
 import AnimalView from "./pages/employee/AnimalView.jsx";
 import AnimalEdit from "./pages/employee/AnimalEdit.jsx";
 import FeedingsEdit from "./pages/employee/FeedingsEdit.jsx";
+import VetVisitView from "./pages/employee/VisitView.jsx";
 
 /* ---------- Any-employee roles helper ---------- */
 const ANY_EMP = [
@@ -384,6 +386,9 @@ function KeeperDash() {
           </li>
           <li>
             <Link to="/feedings">view feeding logs</Link>
+          </li>
+          <li>
+            <Link to="/vetvisit">view vet appointments</Link>
           </li>
         </ul>
       </div>
@@ -1107,7 +1112,22 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/vetvisit/:id"
+          element={
+            <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+              <VetVisitView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vetvisit/:id/edit"
+          element={
+            <ProtectedRoute roles={["admin", "vet"]}>
+              <VetVisitEdit />
+            </ProtectedRoute>
+          }
+        />
         {/* Reports */}
         <Route
           path="/reports"
