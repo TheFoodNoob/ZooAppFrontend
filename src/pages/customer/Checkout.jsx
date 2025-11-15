@@ -69,6 +69,7 @@ export default function Checkout() {
   const [totalCents, setTotalCents] = React.useState(0);
 
   const [buyerName, setBuyerName] = React.useState("");
+  // for guests only; when logged in we always use user.email as the effective email
   const [buyerEmail, setBuyerEmail] = React.useState("");
   const [visitDate, setVisitDate] = React.useState("");
 
@@ -97,7 +98,6 @@ export default function Checkout() {
         { name: t.name, price_cents: Number(t.price_cents || 0) },
       ])
     );
-    
 
     const ticketLines = Object.entries(qty)
       .filter(([, q]) => Number(q) > 0)
@@ -146,10 +146,14 @@ export default function Checkout() {
       nav("/tickets", { replace: true });
     }
   }, [nav]);
-   // Prefill name/email from logged-in customer, but let user overwrite
+
+  // Prefill name/email from logged-in customer
   React.useEffect(() => {
     if (user && user.role === "customer") {
-      setBuyerEmail((prev) => prev || user.email || "");
+      // lock email to the customer account; we won't let this be overridden
+      if (user.email) {
+        setBuyerEmail((prev) => prev || user.email || "");
+      }
       const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
       if (fullName) {
         setBuyerName((prev) => prev || fullName);
@@ -160,21 +164,22 @@ export default function Checkout() {
   // Preview membership discount once we have email + visit date + items
   React.useEffect(() => {
     async function fetchQuote() {
-      // need a cart, valid email, and valid date
       if (!lines.length) {
         setQuote(null);
         return;
       }
-      if (!/^\S+@\S+\.\S+$/.test(buyerEmail)) {
+
+      const effectiveEmail = user?.email || buyerEmail;
+
+      if (!/^\S+@\S+\.\S+$/.test(effectiveEmail)) {
         setQuote(null);
         return;
       }
-      
 
       try {
         const payload = {
           buyer_name: buyerName || "Guest",
-          buyer_email: buyerEmail,
+          buyer_email: effectiveEmail,
           visit_date: visitDate,
           items: lines
             .filter((l) => l.kind === "ticket")
@@ -217,7 +222,7 @@ export default function Checkout() {
     }
 
     fetchQuote();
-  }, [buyerName, buyerEmail, visitDate, lines]);
+  }, [buyerName, buyerEmail, visitDate, lines, user, customerToken]);
 
   async function placeOrder() {
     setErr("");
@@ -270,8 +275,12 @@ export default function Checkout() {
     }
 
     if (!buyerName.trim()) return setErr("Please enter your name.");
-    if (!/^\S+@\S+\.\S+$/.test(buyerEmail))
+
+    const effectiveEmail = user?.email || buyerEmail;
+
+    if (!/^\S+@\S+\.\S+$/.test(effectiveEmail))
       return setErr("Please enter a valid email.");
+
     if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate))
       return setErr("Please choose a visit date (YYYY-MM-DD).");
 
@@ -285,7 +294,7 @@ export default function Checkout() {
 
     const payload = {
       buyer_name: buyerName,
-      buyer_email: buyerEmail,
+      buyer_email: effectiveEmail, // always account email when logged in
       visit_date: visitDate,
       items: ticketItems.map((t) => ({
         ticket_type_id: t.ticket_type_id,
@@ -346,6 +355,8 @@ export default function Checkout() {
       ? quote.total_cents
       : subtotalDisplay - (discountDisplay > 0 ? discountDisplay : 0);
 
+  const effectiveEmailForInput = user?.email || buyerEmail;
+
   return (
     <div className="page">
       <h1>Checkout</h1>
@@ -400,9 +411,7 @@ export default function Checkout() {
             {/* Membership discount row, only if there is one */}
             {quote && discountDisplay > 0 && (
               <>
-                <span>
-                  Membership discount ({quote.discount_pct}%)
-                </span>
+                <span>Membership discount ({quote.discount_pct}%)</span>
                 <span>-{toUSD(discountDisplay)}</span>
               </>
             )}
@@ -444,10 +453,28 @@ export default function Checkout() {
             <div>
               <label>Email</label>
               <input
-                value={buyerEmail}
-                onChange={(e) => setBuyerEmail(e.target.value)}
+                value={effectiveEmailForInput}
+                onChange={
+                  user
+                    ? undefined
+                    : (e) => setBuyerEmail(e.target.value)
+                }
+                readOnly={!!user}
                 placeholder="jane@example.com"
               />
+              {user && (
+                <p
+                  style={{
+                    marginTop: 4,
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
+                  This email is tied to your customer account. Orders placed
+                  while logged in will always be linked to{" "}
+                  <strong>{user.email}</strong>.
+                </p>
+              )}
             </div>
             <div className="span-2">
               <label>Visit date</label>
