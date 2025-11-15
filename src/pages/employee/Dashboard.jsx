@@ -61,6 +61,12 @@ export default function Dashboard() {
               <li>
                 <Link to = "/reports/tickets">view ticket statistics</Link>
               </li>
+              <li>
+                <Link to = "/feedings">view feedings</Link>
+              </li>
+              <li>
+                <Link to = "/vetvisit">view vet appointments</Link>
+              </li>
             </ul>
           )}
         </div>

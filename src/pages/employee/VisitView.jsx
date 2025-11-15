@@ -93,7 +93,7 @@ export default function VetVisitView() {
       </div>
 
       <div style={{ marginTop: "20px" }}>
-        <Link to="/vetvisits" style={backLinkStyle}>
+        <Link to="/vetvisit" style={backLinkStyle}>
           ← Back to Vet Visits
         </Link>
       </div>
