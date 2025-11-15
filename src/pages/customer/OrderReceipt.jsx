@@ -14,10 +14,8 @@ export default function OrderReceipt() {
   const { id } = useParams();
   const loc = useLocation();
 
-  // Order may be passed in via navigate(..., { state: { order, magic } })
   const [order, setOrder] = React.useState(loc.state?.order || null);
 
-  // For this page we treat `t` as the magic lookup token (JWT)
   const [magic] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     return loc.state?.magic || params.get("t") || "";
@@ -26,7 +24,6 @@ export default function OrderReceipt() {
   const [err, setErr] = React.useState("");
   const [note] = React.useState("");
 
-  // Load order from API when we have a magic token but no order yet
   React.useEffect(() => {
     if (!id || !magic || order) return;
 
@@ -46,19 +43,13 @@ export default function OrderReceipt() {
     })();
   }, [id, magic, order]);
 
-  // --------- early states ---------
-
   if (!magic) {
     return (
       <div className="page">
         <h1>Order #{id}</h1>
         <div className="error">
           Missing access token. Please use the link from your email, or visit
-          the{" "}
-          <Link to="/orders">
-            “Find my order”
-          </Link>{" "}
-          page and enter your order number and verification code.
+          <Link to="/orders">“Find my order”</Link>.
         </div>
         <Link to="/tickets">Back to tickets</Link>
       </div>
@@ -87,6 +78,32 @@ export default function OrderReceipt() {
   const refunded = String(order.status || "").toLowerCase() === "refunded";
   const posItems = Array.isArray(order.pos_items) ? order.pos_items : [];
 
+  /* --------------------------------------------------------
+   * DISCOUNT LOGIC (this was missing before)
+   * -------------------------------------------------------- */
+
+  const subtotalCents =
+    order.subtotal_cents != null ? order.subtotal_cents : order.total_cents;
+
+  const totalCents =
+    order.total_cents != null ? order.total_cents : subtotalCents;
+
+  const discountCents =
+    order.discount_cents != null
+      ? order.discount_cents
+      : Math.max(0, subtotalCents - totalCents);
+
+  const hasDiscount = discountCents > 0;
+
+  const discountPct =
+    order.discount_pct != null
+      ? order.discount_pct
+      : hasDiscount && subtotalCents > 0
+      ? Math.round((discountCents * 100) / subtotalCents)
+      : 0;
+
+  /* -------------------------------------------------------- */
+
   return (
     <div
       className="page"
@@ -111,11 +128,7 @@ export default function OrderReceipt() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
         }}
       >
-        {note && (
-          <div className="note" style={{ marginBottom: 8 }}>
-            {note}
-          </div>
-        )}
+        {note && <div className="note">{note}</div>}
 
         <p>
           <strong>Thanks, {order.buyer_name}!</strong>
@@ -131,6 +144,7 @@ export default function OrderReceipt() {
 
         <div style={{ marginTop: "1rem", textAlign: "left" }}>
           <h3 style={{ marginBottom: "0.25rem" }}>Tickets</h3>
+
           {order.items && order.items.length > 0 ? (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {order.items.map((it, i) => (
@@ -151,19 +165,12 @@ export default function OrderReceipt() {
               ))}
             </ul>
           ) : (
-            <p style={{ margin: "4px 0 0", color: "#555" }}>
-              No admission tickets in this order.
-            </p>
+            <p style={{ color: "#555" }}>No admission tickets in this order.</p>
           )}
 
           {posItems.length > 0 && (
             <>
-              <h3
-                style={{
-                  marginTop: "1rem",
-                  marginBottom: "0.25rem",
-                }}
-              >
+              <h3 style={{ marginTop: "1rem", marginBottom: "0.25rem" }}>
                 Food &amp; gift shop items
               </h3>
               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -178,15 +185,9 @@ export default function OrderReceipt() {
                     }}
                   >
                     <span>
-                      {it.name} × {it.quantity}
+                      {it.name} × {it.quantity}{" "}
                       {it.category && (
-                        <span
-                          style={{
-                            marginLeft: 6,
-                            fontSize: 12,
-                            opacity: 0.7,
-                          }}
-                        >
+                        <span style={{ opacity: 0.6, fontSize: 12 }}>
                           ({it.category})
                         </span>
                       )}
@@ -198,39 +199,64 @@ export default function OrderReceipt() {
             </>
           )}
 
+          {/* ---------------------- */}
+          {/*  TOTALS WITH DISCOUNT */}
+          {/* ---------------------- */}
+
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "1fr auto",
-              marginTop: 8,
+              marginTop: 12,
               fontWeight: 700,
             }}
           >
+            <span>Subtotal</span>
+            <span>{toUSD(subtotalCents)}</span>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              marginTop: 4,
+              fontWeight: 700,
+            }}
+          >
+            <span>Membership discount</span>
+            <span>
+              {hasDiscount
+                ? `${discountPct}% (-${toUSD(discountCents)})`
+                : "—"}
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              marginTop: 4,
+              fontWeight: 900,
+            }}
+          >
             <span>Total</span>
-            <span>{toUSD(order.total_cents)}</span>
+            <span>{toUSD(totalCents)}</span>
           </div>
 
           {refunded && (
             <div style={{ marginTop: 6 }}>
-              <span style={{ fontWeight: 700 }}>Refunded:</span>{" "}
-              {toUSD(
-                order.refund_cents ??
-                  order.refunded_cents ??
-                  order.total_cents
-              )}
+              <strong>Refunded:</strong>{" "}
+              {toUSD(order.refund_cents ?? order.refunded_cents ?? totalCents)}
             </div>
           )}
         </div>
 
         <div style={{ marginTop: "1.25rem", textAlign: "left" }}>
           <h3>Refunds</h3>
-          <p style={{ margin: 0, color: "#444" }}>
-            This receipt link lets you <strong>view</strong> your order. To
-            request a refund, please go to the{" "}
-            <Link to="/orders">“Find my order”</Link> page, enter your order
-            number and email, and use the verification code sent to you. That
-            flow uses a secure one-time code and will let you cancel if you’re
-            still within the refund window.
+          <p style={{ margin: 0 }}>
+            To request a refund, go to{" "}
+            <Link to="/orders">“Find my order”</Link> and enter your order
+            number and email.
           </p>
         </div>
       </div>

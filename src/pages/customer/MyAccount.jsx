@@ -39,6 +39,8 @@ function formatUSD(cents) {
   });
 }
 
+const INITIAL_ROWS = 5;
+
 export default function MyAccount() {
   const { user, customerToken } = useAuth();
   const location = useLocation();
@@ -51,6 +53,12 @@ export default function MyAccount() {
   const [posPurchases, setPosPurchases] = React.useState([]);
   const [membershipHistory, setMembershipHistory] = React.useState([]);
   const [donations, setDonations] = React.useState([]);
+
+  // how many rows to show for each section
+  const [ticketLimit, setTicketLimit] = React.useState(INITIAL_ROWS);
+  const [posLimit, setPosLimit] = React.useState(INITIAL_ROWS);
+  const [membershipLimit, setMembershipLimit] = React.useState(INITIAL_ROWS);
+  const [donationLimit, setDonationLimit] = React.useState(INITIAL_ROWS);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -117,6 +125,12 @@ export default function MyAccount() {
           setMembershipHistory(historyData?.memberships || []);
           setDonations(historyData?.donations || []);
 
+          // reset visible-row limits whenever data is reloaded
+          setTicketLimit(INITIAL_ROWS);
+          setPosLimit(INITIAL_ROWS);
+          setMembershipLimit(INITIAL_ROWS);
+          setDonationLimit(INITIAL_ROWS);
+
           setLoading(false);
         }
       } catch (e) {
@@ -151,6 +165,24 @@ export default function MyAccount() {
 
   const membershipStatus = account?.membership_status || "none";
   const isMember = membershipStatus === "active";
+
+  // slice the visible rows per section
+  const visibleTicketOrders = orders.slice(0, ticketLimit);
+  const visiblePos = posPurchases.slice(0, posLimit);
+  const visibleMemberships = membershipHistory.slice(0, membershipLimit);
+  const visibleDonations = donations.slice(0, donationLimit);
+
+  // simple inline style for the "View more / View less" buttons
+  const viewMoreStyle = {
+    marginTop: 8,
+    padding: 0,
+    border: "none",
+    background: "none",
+    color: "var(--link-color, #237342)",
+    cursor: "pointer",
+    fontSize: 14,
+    textDecoration: "underline",
+  };
 
   return (
     <div className="page">
@@ -271,47 +303,110 @@ export default function MyAccount() {
                   When you purchase tickets, they’ll appear here.
                 </p>
               ) : (
-                <div style={{ marginTop: 10, overflowX: "auto" }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Order #</th>
-                        <th>Placed on</th>
-                        <th>Visit date</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr key={o.order_id}>
-                          <td>{o.order_id}</td>
-                          <td>
-                            {formatDate(o.created_at || o.order_date)}{" "}
-                            {formatTime(o.created_at || o.order_date)}
-                          </td>
-                          <td>{formatDate(o.visit_date)}</td>
-                          <td>{formatUSD(o.total_cents)}</td>
-                          <td>
-                            {o.status
-                              ? o.status.charAt(0).toUpperCase() +
-                                o.status.slice(1)
-                              : "—"}
-                          </td>
-                          <td>
-                            <Link
-                              to={`/account/orders/${o.order_id}`}
-                              state={{ order: o }}
-                            >
-                              View details
-                            </Link>
-                          </td>
+                <>
+                  <div style={{ marginTop: 10, overflowX: "auto" }}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Order #</th>
+                          <th>Placed on</th>
+                          <th>Visit date</th>
+                          <th>Ticket total</th>
+                          <th>Status</th>
+                          <th></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {visibleTicketOrders.map((o) => {
+                          // same discount logic as AccountOrderDetail / history
+                          let ticketSubtotalCents;
+                          let ticketDiscountCents;
+                          let ticketFinalCents;
+
+                          const discountPct = Number(o.discount_pct || 0);
+
+                          if (o.ticket_subtotal_cents != null) {
+                            ticketSubtotalCents = Number(
+                              o.ticket_subtotal_cents || 0
+                            );
+                            ticketDiscountCents = Number(
+                              o.ticket_discount_cents || 0
+                            );
+                            ticketFinalCents =
+                              o.ticket_total_cents != null
+                                ? Number(o.ticket_total_cents)
+                                : ticketSubtotalCents - ticketDiscountCents;
+                          } else {
+                            ticketSubtotalCents =
+                              o.subtotal_cents != null
+                                ? Number(o.subtotal_cents)
+                                : Number(o.total_cents || 0);
+
+                            ticketDiscountCents = 0;
+                            ticketFinalCents = ticketSubtotalCents;
+
+                            if (discountPct > 0 && ticketSubtotalCents > 0) {
+                              ticketDiscountCents = Math.round(
+                                ticketSubtotalCents * (discountPct / 100)
+                              );
+                              if (ticketDiscountCents < 0)
+                                ticketDiscountCents = 0;
+                              if (ticketDiscountCents > ticketSubtotalCents) {
+                                ticketDiscountCents = ticketSubtotalCents;
+                              }
+                              ticketFinalCents =
+                                ticketSubtotalCents - ticketDiscountCents;
+                            }
+                          }
+
+                          return (
+                            <tr key={o.order_id}>
+                              <td>{o.order_id}</td>
+                              <td>
+                                {formatDate(o.created_at || o.order_date)}{" "}
+                                {formatTime(o.created_at || o.order_date)}
+                              </td>
+                              <td>{formatDate(o.visit_date)}</td>
+                              <td>{formatUSD(ticketFinalCents)}</td>
+                              <td>
+                                {o.status
+                                  ? o.status.charAt(0).toUpperCase() +
+                                    o.status.slice(1)
+                                  : "—"}
+                              </td>
+                              <td>
+                                <Link
+                                  to={`/account/orders/${o.order_id}`}
+                                  state={{ order: o }}
+                                >
+                                  View details
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {orders.length > INITIAL_ROWS && (
+                    <button
+                      type="button"
+                      style={viewMoreStyle}
+                      onClick={() => {
+                        if (ticketLimit >= orders.length) {
+                          setTicketLimit(INITIAL_ROWS);
+                        } else {
+                          setTicketLimit(
+                            Math.min(ticketLimit + INITIAL_ROWS, orders.length)
+                          );
+                        }
+                      }}
+                    >
+                      {ticketLimit >= orders.length ? "View less" : "View more"}
+                    </button>
+                  )}
+                </>
               )}
 
               <p
@@ -336,40 +431,69 @@ export default function MyAccount() {
                   zoo, those purchases will appear here.
                 </p>
               ) : (
-                <div style={{ marginTop: 10, overflowX: "auto" }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Receipt #</th>
-                        <th>Date</th>
-                        <th>Source</th>
-                        <th>Membership at sale</th>
-                        <th>Discount</th>
-                        <th>Total</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {posPurchases.map((p) => (
-                        <tr key={p.pos_sale_id}>
-                          <td>{p.pos_sale_id}</td>
-                          <td>{formatDate(p.created_at)}</td>
-                          <td>{p.source}</td>
-                          <td>{p.membership_tier_at_sale || "None"}</td>
-                          <td>
-                            {p.discount_pct
-                              ? `${p.discount_pct}% (-${formatUSD(p.discount_cents)})`
-                              : "—"}
-                          </td>
-                          <td>{formatUSD(p.total_cents)}</td>
-                          <td>
-                            <Link to={`/account/pos/${p.pos_sale_id}`}>View details</Link>
-                          </td>
+                <>
+                  <div style={{ marginTop: 10, overflowX: "auto" }}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Receipt #</th>
+                          <th>Date</th>
+                          <th>Source</th>
+                          <th>Membership at sale</th>
+                          <th>Discount</th>
+                          <th>Total</th>
+                          <th></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {visiblePos.map((p) => (
+                          <tr key={p.pos_sale_id}>
+                            <td>{p.pos_sale_id}</td>
+                            <td>{formatDate(p.created_at)}</td>
+                            <td>{p.source}</td>
+                            <td>{p.membership_tier_at_sale || "None"}</td>
+                            <td>
+                              {p.discount_pct
+                                ? `${p.discount_pct}% (-${formatUSD(
+                                    p.discount_cents
+                                  )})`
+                                : "—"}
+                            </td>
+                            <td>{formatUSD(p.total_cents)}</td>
+                            <td>
+                              <Link to={`/account/pos/${p.pos_sale_id}`}>
+                                View details
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {posPurchases.length > INITIAL_ROWS && (
+                    <button
+                      type="button"
+                      style={viewMoreStyle}
+                      onClick={() => {
+                        if (posLimit >= posPurchases.length) {
+                          setPosLimit(INITIAL_ROWS);
+                        } else {
+                          setPosLimit(
+                            Math.min(
+                              posLimit + INITIAL_ROWS,
+                              posPurchases.length
+                            )
+                          );
+                        }
+                      }}
+                    >
+                      {posLimit >= posPurchases.length
+                        ? "View less"
+                        : "View more"}
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -382,47 +506,70 @@ export default function MyAccount() {
                   membership, the details will appear here.
                 </p>
               ) : (
-                <div style={{ marginTop: 10, overflowX: "auto" }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Transaction #</th>
-                        <th>Tier</th>
-                        <th>Started</th>
-                        <th>Ends</th>
-                        <th>Discount</th>
-                        <th>Amount</th>
-                        <th>Source</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {membershipHistory.map((m) => (
-                        <tr key={m.membership_txn_id}>
-                          <td>{m.membership_txn_id}</td>
-                          <td>{m.membership_tier}</td>
-                          <td>{formatDate(m.started_on)}</td>
-                          <td>{formatDate(m.ends_on)}</td>
-                          <td>
-                            {m.discount_pct
-                              ? `${m.discount_pct}%`
-                              : "—"}
-                          </td>
-                          <td>{formatUSD(m.total_cents)}</td>
-                          <td>{m.source}</td>
-                          <td>
-                            <Link
-                              to={`/account/memberships/${m.membership_txn_id}`}
-                              state={{ membership: m }}
-                            >
-                              View details
-                            </Link>
-                          </td>
+                <>
+                  <div style={{ marginTop: 10, overflowX: "auto" }}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Transaction #</th>
+                          <th>Tier</th>
+                          <th>Started</th>
+                          <th>Ends</th>
+                          <th>Discount</th>
+                          <th>Amount</th>
+                          <th>Source</th>
+                          <th></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {visibleMemberships.map((m) => (
+                          <tr key={m.membership_txn_id}>
+                            <td>{m.membership_txn_id}</td>
+                            <td>{m.membership_tier}</td>
+                            <td>{formatDate(m.started_on)}</td>
+                            <td>{formatDate(m.ends_on)}</td>
+                            <td>
+                              {m.discount_pct ? `${m.discount_pct}%` : "—"}
+                            </td>
+                            <td>{formatUSD(m.total_cents)}</td>
+                            <td>{m.source}</td>
+                            <td>
+                              <Link
+                                to={`/account/memberships/${m.membership_txn_id}`}
+                                state={{ membership: m }}
+                              >
+                                View details
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {membershipHistory.length > INITIAL_ROWS && (
+                    <button
+                      type="button"
+                      style={viewMoreStyle}
+                      onClick={() => {
+                        if (membershipLimit >= membershipHistory.length) {
+                          setMembershipLimit(INITIAL_ROWS);
+                        } else {
+                          setMembershipLimit(
+                            Math.min(
+                              membershipLimit + INITIAL_ROWS,
+                              membershipHistory.length
+                            )
+                          );
+                        }
+                      }}
+                    >
+                      {membershipLimit >= membershipHistory.length
+                        ? "View less"
+                        : "View more"}
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -442,7 +589,7 @@ export default function MyAccount() {
                       </tr>
                     </thead>
                     <tbody>
-                      {donations.map((d) => (
+                      {visibleDonations.map((d) => (
                         <tr key={d.donation_id}>
                           <td>{d.donation_id}</td>
                           <td>{formatDate(d.created_at)}</td>
@@ -461,6 +608,29 @@ export default function MyAccount() {
                     </tbody>
                   </table>
                 </div>
+
+                {donations.length > INITIAL_ROWS && (
+                  <button
+                    type="button"
+                    style={viewMoreStyle}
+                    onClick={() => {
+                      if (donationLimit >= donations.length) {
+                        setDonationLimit(INITIAL_ROWS);
+                      } else {
+                        setDonationLimit(
+                          Math.min(
+                            donationLimit + INITIAL_ROWS,
+                            donations.length
+                          )
+                        );
+                      }
+                    }}
+                  >
+                    {donationLimit >= donations.length
+                      ? "View less"
+                      : "View more"}
+                  </button>
+                )}
               </div>
             )}
           </>

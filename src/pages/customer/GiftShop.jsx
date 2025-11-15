@@ -149,9 +149,7 @@ export default function GiftShop() {
       <div className="container">
         <h1>Zoo Gift Shop</h1>
         <p style={{ maxWidth: 640, marginTop: 8 }}>
-          Pick up souvenirs and zoo merch before or after your visit. This page
-          demonstrates how food &amp; gift shop items can be modeled separately
-          from tickets but still tied to a customer account.
+          Pick up souvenirs and zoo merch before or after your visit.
         </p>
 
         {loading && <p style={{ marginTop: 16 }}>Loading gift shop items…</p>}
@@ -264,9 +262,7 @@ export default function GiftShop() {
                   color: "var(--muted)",
                 }}
               >
-                For demo purposes, food and gift purchases are modeled in a
-                separate POS cart, but they share the same checkout and account
-                history as ticket orders.
+                
               </p>
             </div>
           </>

@@ -56,6 +56,33 @@ export default function AccountPosReceipt() {
     if (customerToken) load();
   }, [id, customerToken]);
 
+  // ---------- derived discount fields ----------
+  let subtotalCents = 0;
+  let totalCents = 0;
+  let discountCents = 0;
+  let discountPct = 0;
+  let hasDiscount = false;
+
+  if (header) {
+    subtotalCents =
+      header.subtotal_cents != null ? header.subtotal_cents : header.total_cents || 0;
+    totalCents = header.total_cents != null ? header.total_cents : subtotalCents;
+
+    if (header.discount_cents != null) {
+      discountCents = header.discount_cents;
+    } else {
+      discountCents = Math.max(0, subtotalCents - totalCents);
+    }
+
+    hasDiscount = discountCents > 0;
+
+    if (header.discount_pct != null) {
+      discountPct = header.discount_pct;
+    } else if (hasDiscount && subtotalCents > 0) {
+      discountPct = Math.round((discountCents * 100) / subtotalCents);
+    }
+  }
+
   return (
     <div className="page">
       <div className="container">
@@ -92,12 +119,18 @@ export default function AccountPosReceipt() {
                     </thead>
                     <tbody>
                       {items.map((it, idx) => (
-                        <tr key={it.pos_sale_item_id || it.pos_item_id || `i-${idx}`}>
+                        <tr
+                          key={it.pos_sale_item_id || it.pos_item_id || `i-${idx}`}
+                        >
                           <td>{it.item_name || it.name || "Item"}</td>
                           <td>{it.category || "—"}</td>
                           <td>{it.quantity}</td>
                           <td>{formatUSD(it.price_cents)}</td>
-                          <td>{formatUSD(it.line_total_cents || it.line_subtotal_cents)}</td>
+                          <td>
+                            {formatUSD(
+                              it.line_total_cents || it.line_subtotal_cents
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -107,16 +140,14 @@ export default function AccountPosReceipt() {
             )}
 
             <p style={{ marginTop: 16 }}>
-              <strong>Subtotal:</strong> {formatUSD(header.subtotal_cents)}
+              <strong>Subtotal:</strong> {formatUSD(subtotalCents)}
               <br />
-              <strong>Discount:</strong>{" "}
-              {header.discount_pct
-                ? `${header.discount_pct}% (-${formatUSD(
-                    header.discount_cents
-                  )})`
+              <strong>Membership discount:</strong>{" "}
+              {hasDiscount
+                ? `${discountPct}% (-${formatUSD(discountCents)})`
                 : "—"}
               <br />
-              <strong>Total paid:</strong> {formatUSD(header.total_cents)}
+              <strong>Total paid:</strong> {formatUSD(totalCents)}
             </p>
 
             <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>

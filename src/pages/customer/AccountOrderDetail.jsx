@@ -68,6 +68,28 @@ export default function AccountOrderDetail() {
     if (customerToken) load();
   }, [id, customerToken]);
 
+  // ---- derived ticket-only totals ----
+  const ticketSubtotalCents = items.reduce(
+    (sum, it) => sum + Number(it.line_total_cents || 0),
+    0
+  );
+
+  const discountPct = header ? Number(header.discount_pct || 0) : 0;
+
+  let ticketDiscountCents = 0;
+  let ticketFinalCents = ticketSubtotalCents;
+
+  if (discountPct > 0 && ticketSubtotalCents > 0) {
+    ticketDiscountCents = Math.round(
+      ticketSubtotalCents * (discountPct / 100)
+    );
+    if (ticketDiscountCents < 0) ticketDiscountCents = 0;
+    if (ticketDiscountCents > ticketSubtotalCents) {
+      ticketDiscountCents = ticketSubtotalCents;
+    }
+    ticketFinalCents = ticketSubtotalCents - ticketDiscountCents;
+  }
+
   return (
     <div className="page">
       <div className="container">
@@ -91,7 +113,26 @@ export default function AccountOrderDetail() {
                   header.status.slice(1)
                 : "—"}
               <br />
-              <strong>Total:</strong> {formatUSD(header.total_cents)}
+              <strong>Total paid for tickets:</strong>{" "}
+              {formatUSD(ticketFinalCents)}
+              <br />
+              <strong>Membership at sale:</strong>{" "}
+              {header.membership_tier_at_sale || "None"}
+              <br />
+              <strong>Subtotal (tickets):</strong>{" "}
+              {formatUSD(ticketSubtotalCents)}
+              <br />
+              <strong>Membership discount:</strong>{" "}
+              {discountPct > 0 ? (
+                <>
+                  {discountPct}% (-{formatUSD(ticketDiscountCents)})
+                </>
+              ) : (
+                "—"
+              )}
+              <br />
+              <strong>Final total (tickets):</strong>{" "}
+              {formatUSD(ticketFinalCents)}
             </p>
 
             {items.length > 0 ? (
@@ -130,8 +171,8 @@ export default function AccountOrderDetail() {
 
             <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
               Ticket line items are stored in the <code>order_item</code> table.
-              This view ties those details back to your customer account and
-              visit history.
+              This view shows the ticket portion of your order, including any
+              membership discount applied to tickets.
             </p>
 
             <p style={{ marginTop: 16 }}>

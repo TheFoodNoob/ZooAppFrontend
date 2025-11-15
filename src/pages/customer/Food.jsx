@@ -150,9 +150,7 @@ export default function Food() {
       <div className="container">
         <h1>Food &amp; Snacks</h1>
         <p style={{ maxWidth: 640, marginTop: 8 }}>
-          Plan what you’d like to eat during your visit. For the project, this
-          page shows how on-site food purchases could be modeled in the
-          database.
+          Plan what you’d like to eat during your visit.
         </p>
 
         {loading && <p style={{ marginTop: 16 }}>Loading menu…</p>}
@@ -263,9 +261,7 @@ export default function Food() {
                   color: "var(--muted)",
                 }}
               >
-                For demo purposes, food and gift purchases are modeled in a
-                separate POS cart, but they share the same checkout and account
-                history as ticket orders.
+                
               </p>
             </div>
           </>

@@ -2,6 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
+import { useAuth } from "../../context/AuthContext";
 
 const toUSD = (cents) =>
   (Number(cents || 0) / 100).toLocaleString(undefined, {
@@ -62,6 +63,7 @@ function clearCartEverywhere() {
 
 export default function Checkout() {
   const nav = useNavigate();
+  const { customerToken, user } = useAuth() || {};
 
   const [lines, setLines] = React.useState([]);
   const [totalCents, setTotalCents] = React.useState(0);
@@ -69,6 +71,9 @@ export default function Checkout() {
   const [buyerName, setBuyerName] = React.useState("");
   const [buyerEmail, setBuyerEmail] = React.useState("");
   const [visitDate, setVisitDate] = React.useState("");
+
+  // membership preview coming back from the API
+  const [quote, setQuote] = React.useState(null);
 
   // cosmetic “fake payment” fields (never sent to backend)
   const [cardNum, setCardNum] = React.useState("");
@@ -92,6 +97,7 @@ export default function Checkout() {
         { name: t.name, price_cents: Number(t.price_cents || 0) },
       ])
     );
+    
 
     const ticketLines = Object.entries(qty)
       .filter(([, q]) => Number(q) > 0)
@@ -140,6 +146,78 @@ export default function Checkout() {
       nav("/tickets", { replace: true });
     }
   }, [nav]);
+   // Prefill name/email from logged-in customer, but let user overwrite
+  React.useEffect(() => {
+    if (user && user.role === "customer") {
+      setBuyerEmail((prev) => prev || user.email || "");
+      const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+      if (fullName) {
+        setBuyerName((prev) => prev || fullName);
+      }
+    }
+  }, [user]);
+
+  // Preview membership discount once we have email + visit date + items
+  React.useEffect(() => {
+    async function fetchQuote() {
+      // need a cart, valid email, and valid date
+      if (!lines.length) {
+        setQuote(null);
+        return;
+      }
+      if (!/^\S+@\S+\.\S+$/.test(buyerEmail)) {
+        setQuote(null);
+        return;
+      }
+      
+
+      try {
+        const payload = {
+          buyer_name: buyerName || "Guest",
+          buyer_email: buyerEmail,
+          visit_date: visitDate,
+          items: lines
+            .filter((l) => l.kind === "ticket")
+            .map((l) => ({
+              ticket_type_id: l.ticket_type_id,
+              quantity: l.qty,
+            })),
+          pos_items: lines
+            .filter((l) => l.kind === "pos")
+            .map((l) => ({
+              pos_item_id: l.pos_item_id,
+              quantity: l.qty,
+            })),
+          preview: true,
+        };
+
+        const headers = { "Content-Type": "application/json" };
+        if (customerToken) {
+          headers.Authorization = `Bearer ${customerToken}`;
+        }
+
+        const r = await fetch(`${api}/api/public/checkout`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) {
+          setQuote(null);
+          return;
+        }
+
+        // server returns { ok, ...totals } in preview mode OR { ok, order, ... } for real
+        setQuote(j.order || j);
+      } catch (e) {
+        console.error("checkout preview error:", e);
+        setQuote(null);
+      }
+    }
+
+    fetchQuote();
+  }, [buyerName, buyerEmail, visitDate, lines]);
 
   async function placeOrder() {
     setErr("");
@@ -221,9 +299,14 @@ export default function Checkout() {
 
     setBusy(true);
     try {
+      const headers = { "Content-Type": "application/json" };
+      if (customerToken) {
+        headers.Authorization = `Bearer ${customerToken}`;
+      }
+
       const r = await fetch(`${api}/api/public/checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -253,6 +336,15 @@ export default function Checkout() {
       setBusy(false);
     }
   }
+
+  // Decide which numbers to show in the summary:
+  const subtotalDisplay = quote?.subtotal_cents ?? totalCents;
+  const discountDisplay =
+    typeof quote?.discount_cents === "number" ? quote.discount_cents : 0;
+  const totalDisplay =
+    typeof quote?.total_cents === "number"
+      ? quote.total_cents
+      : subtotalDisplay - (discountDisplay > 0 ? discountDisplay : 0);
 
   return (
     <div className="page">
@@ -289,6 +381,7 @@ export default function Checkout() {
               </li>
             ))}
           </ul>
+
           <div
             style={{
               display: "grid",
@@ -296,12 +389,44 @@ export default function Checkout() {
               paddingTop: 8,
               marginTop: 6,
               borderTop: "1px solid #eadfae",
-              fontWeight: 900,
+              fontWeight: 700,
+              rowGap: 4,
             }}
           >
-            <span>Total</span>
-            <span>{toUSD(totalCents)}</span>
+            {/* Subtotal (before membership discount) */}
+            <span>Subtotal</span>
+            <span>{toUSD(subtotalDisplay)}</span>
+
+            {/* Membership discount row, only if there is one */}
+            {quote && discountDisplay > 0 && (
+              <>
+                <span>
+                  Membership discount ({quote.discount_pct}%)
+                </span>
+                <span>-{toUSD(discountDisplay)}</span>
+              </>
+            )}
+
+            {/* Final estimated total */}
+            <span style={{ marginTop: 4, fontWeight: 900 }}>
+              Estimated total
+            </span>
+            <span style={{ marginTop: 4, fontWeight: 900 }}>
+              {toUSD(totalDisplay)}
+            </span>
           </div>
+
+          {quote && discountDisplay > 0 ? (
+            <p style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+              As a member, you save{" "}
+              <strong>{toUSD(discountDisplay)}</strong> on this order.
+            </p>
+          ) : (
+            <p style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+              Any eligible membership discounts for your account will be applied
+              when your order is processed and will appear on your receipt.
+            </p>
+          )}
         </div>
 
         {/* Your info */}
@@ -405,7 +530,7 @@ export default function Checkout() {
       <div className="panel" style={{ marginTop: 12 }}>
         Tickets, food, and gift shop items are processed together in this online
         checkout. Your email receipt includes a breakdown of everything in your
-        order.
+        order, including any membership discounts.
       </div>
     </div>
   );
