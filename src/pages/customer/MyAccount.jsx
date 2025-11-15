@@ -60,6 +60,12 @@ export default function MyAccount() {
   const [membershipLimit, setMembershipLimit] = React.useState(INITIAL_ROWS);
   const [donationLimit, setDonationLimit] = React.useState(INITIAL_ROWS);
 
+  // total membership savings (in cents) from the tiny endpoint
+  const [membershipSavings, setMembershipSavings] = React.useState(0);
+
+  // animated display value for savings badge
+  const [displaySavings, setDisplaySavings] = React.useState(0);
+
   React.useEffect(() => {
     let cancelled = false;
 
@@ -70,6 +76,7 @@ export default function MyAccount() {
       setPosPurchases([]);
       setMembershipHistory([]);
       setDonations([]);
+      setMembershipSavings(0);
       return;
     }
 
@@ -89,21 +96,27 @@ export default function MyAccount() {
       };
 
       try {
-        const [acctRes, ordersRes, historyRes] = await Promise.allSettled([
-          fetch(`${api}/api/customer/account`, {
-            headers: { Authorization: `Bearer ${customerToken}` },
-          }),
-          fetch(`${api}/api/customer/orders`, {
-            headers: { Authorization: `Bearer ${customerToken}` },
-          }),
-          fetch(`${api}/api/customer/history`, {
-            headers: { Authorization: `Bearer ${customerToken}` },
-          }),
-        ]);
+        const [acctRes, ordersRes, historyRes, savingsRes] =
+          await Promise.allSettled([
+            fetch(`${api}/api/customer/account`, {
+              headers: { Authorization: `Bearer ${customerToken}` },
+            }),
+            fetch(`${api}/api/customer/orders`, {
+              headers: { Authorization: `Bearer ${customerToken}` },
+            }),
+            fetch(`${api}/api/customer/history`, {
+              headers: { Authorization: `Bearer ${customerToken}` },
+            }),
+            // tiny endpoint that returns { total_savings_cents: number }
+            fetch(`${api}/api/customer/membership-savings`, {
+              headers: { Authorization: `Bearer ${customerToken}` },
+            }),
+          ]);
 
         let acctData = null;
         let orderData = [];
         let historyData = null;
+        let savingsData = null;
 
         if (acctRes.status === "fulfilled" && acctRes.value.ok) {
           acctData = await acctRes.value.json().catch(() => null);
@@ -117,6 +130,10 @@ export default function MyAccount() {
           historyData = await historyRes.value.json().catch(() => null);
         }
 
+        if (savingsRes.status === "fulfilled" && savingsRes.value.ok) {
+          savingsData = await savingsRes.value.json().catch(() => null);
+        }
+
         if (!cancelled) {
           setAccount(acctData || baseAccount);
           setOrders(Array.isArray(orderData) ? orderData : []);
@@ -124,6 +141,10 @@ export default function MyAccount() {
           setPosPurchases(historyData?.pos || []);
           setMembershipHistory(historyData?.memberships || []);
           setDonations(historyData?.donations || []);
+
+          setMembershipSavings(
+            Number(savingsData?.total_savings_cents || 0)
+          );
 
           // reset visible-row limits whenever data is reloaded
           setTicketLimit(INITIAL_ROWS);
@@ -152,6 +173,41 @@ export default function MyAccount() {
     };
   }, [user, customerToken]);
 
+  // animate the savings value whenever membershipSavings changes
+  React.useEffect(() => {
+    if (!membershipSavings || membershipSavings <= 0) {
+      setDisplaySavings(0);
+      return;
+    }
+
+    let frameId;
+    const startValue = 0;
+    const target = membershipSavings;
+    const duration = 800; // ms
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // ease-out cubic for smoother ending
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(startValue + (target - startValue) * eased);
+
+      setDisplaySavings(current);
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(step);
+      }
+    }
+
+    frameId = requestAnimationFrame(step);
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [membershipSavings]);
+
   // Guard AFTER hooks
   if (!user || !customerToken) {
     return (
@@ -165,6 +221,21 @@ export default function MyAccount() {
 
   const membershipStatus = account?.membership_status || "none";
   const isMember = membershipStatus === "active";
+
+  // current membership cost (for progress bar) – use latest membership txn if present
+  const currentMembershipTxn = membershipHistory[0] || null;
+  const membershipCostCents =
+    currentMembershipTxn?.total_cents ??
+    currentMembershipTxn?.price_cents ??
+    0;
+
+  let membershipProgressPct = null;
+  if (membershipCostCents > 0 && membershipSavings > 0) {
+    membershipProgressPct = Math.min(
+      100,
+      Math.round((membershipSavings / membershipCostCents) * 100)
+    );
+  }
 
   // slice the visible rows per section
   const visibleTicketOrders = orders.slice(0, ticketLimit);
@@ -256,9 +327,111 @@ export default function MyAccount() {
             {isMember && (
               <div className="card" style={{ marginTop: 20 }}>
                 <h2>Your membership benefits</h2>
+
+                {/* Savings badge */}
+                {membershipSavings > 0 && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "18px 22px",
+                      borderRadius: 18,
+                      background:
+                        "linear-gradient(135deg, rgba(35,115,66,0.12), rgba(35,115,66,0.03))",
+                      textAlign: "center",
+                      width: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                      border: "1px solid #e6c979", // thin gold border
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: ".09em",
+                        color: "#237342",
+                        marginBottom: 4,
+                      }}
+                    >
+                      TOTAL SAVED WITH YOUR MEMBERSHIP
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: 32,
+                        fontWeight: 800,
+                        color: "#1b5c35",
+                      }}
+                    >
+                      {formatUSD(displaySavings)}
+                    </span>
+
+                    {membershipProgressPct != null && (
+                      <div
+                        style={{
+                          marginTop: 12,
+                          width: "100%",
+                          maxWidth: 360,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: 12,
+                            marginBottom: 4,
+                            color: "#4f5b4f",
+                          }}
+                        >
+                          <span>Membership savings progress</span>
+                          <span>{membershipProgressPct}%</span>
+                        </div>
+                        <div
+                          style={{
+                            height: 8,
+                            borderRadius: 999,
+                            background: "#e6f2ea",
+                            overflow: "hidden",
+                            border: "1px solid rgba(0,0,0,0.06)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${membershipProgressPct}%`,
+                              height: "100%",
+                              borderRadius: 999,
+                              background:
+                                "linear-gradient(90deg, #2e7d32, #66bb6a)",
+                              transition: "width 0.4s ease-out",
+                            }}
+                          />
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 11,
+                            color: "#4f5b4f",
+                          }}
+                        >
+                          Saving toward your{" "}
+                          {(
+                            account?.membership_tier ||
+                            "membership"
+                          ).toLowerCase()}{" "}
+                          cost of {formatUSD(membershipCostCents || 0)}.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <ul
                   style={{
-                    marginTop: 8,
+                    marginTop: 16,
                     marginLeft: 18,
                     fontSize: 14,
                   }}
