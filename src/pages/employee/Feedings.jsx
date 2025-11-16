@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../../api"; 
+import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import Toast from "../../components/Toast";
 import { useNavigate } from "react-router-dom";
@@ -7,15 +7,24 @@ import { useNavigate } from "react-router-dom";
 export default function Feedings() {
   const { token, user } = useAuth();
   const nav = useNavigate();
+
   const [feedings, setFeedings] = useState([]);
   const [animals, setAnimals] = useState([]);
-  const [form, setForm] = useState({ animal_id: "", feeding_time: "" });
-  const [toast, setToast] = useState({ open: false, type: "info", text: "" });
+  const [foods, setFoods] = useState([]);
 
+  const [form, setForm] = useState({
+    animal_id: "",
+    food_id: "",
+    feed_amount_kg: "",
+    feeding_time: "",
+  });
+
+  const [toast, setToast] = useState({ open: false, type: "info", text: "" });
   const showToast = (type, text) => setToast({ open: true, type, text });
+
   useEffect(() => {
     if (!toast.open) return;
-    const t = setTimeout(() => setToast(s => ({ ...s, open: false })), 2500);
+    const t = setTimeout(() => setToast((s) => ({ ...s, open: false })), 2500);
     return () => clearTimeout(t);
   }, [toast.open]);
 
@@ -24,12 +33,18 @@ export default function Feedings() {
   useEffect(() => {
     loadFeedings();
     loadAnimals();
+    loadFoods();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const authHeaders = {
+    Authorization: `Bearer ${token}`,
+  };
 
   const loadFeedings = async () => {
     try {
       const res = await fetch(`${api}/api/feedings`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
       });
       if (!res.ok) throw new Error("Failed to load feedings");
       const data = await res.json();
@@ -42,7 +57,7 @@ export default function Feedings() {
   const loadAnimals = async () => {
     try {
       const res = await fetch(`${api}/api/animals`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
       });
       if (!res.ok) throw new Error("Failed to load animals");
       const data = await res.json();
@@ -52,32 +67,67 @@ export default function Feedings() {
     }
   };
 
+  const loadFoods = async () => {
+    try {
+      const res = await fetch(`${api}/api/food`, {
+        headers: authHeaders,
+      });
+      if (!res.ok) throw new Error("Failed to load foods");
+      const data = await res.json();
+      setFoods(data);
+    } catch (err) {
+      showToast("error", err.message || "Error loading foods");
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.animal_id || !form.feeding_time) {
-      showToast("error", "Select an animal and feeding time");
+
+    if (
+      !form.animal_id ||
+      !form.food_id ||
+      !form.feed_amount_kg ||
+      !form.feeding_time
+    ) {
+      showToast("error", "Select animal, food, amount, and feeding time");
+      return;
+    }
+
+    if (!user?.employee_id) {
+      showToast("error", "Missing employee id on user – cannot log feeding");
       return;
     }
 
     try {
+      const payload = {
+        animal_id: Number(form.animal_id),
+        feed_recorded_by: Number(user.employee_id),
+        food_id: Number(form.food_id),
+        feeding_time: form.feeding_time,
+        feed_amount_kg: Number(form.feed_amount_kg),
+      };
+
       const res = await fetch(`${api}/api/feedings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...authHeaders,
         },
-        body: JSON.stringify({
-          animal_id: +form.animal_id,
-          feeding_time: form.feeding_time,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const errBody = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to log feeding");
+        throw new Error(errBody.error || "Failed to log feeding");
       }
+
       showToast("success", "Feeding logged!");
-      setForm({ animal_id: "", feeding_time: "" });
+      setForm({
+        animal_id: "",
+        food_id: "",
+        feed_amount_kg: "",
+        feeding_time: "",
+      });
       await loadFeedings();
     } catch (err) {
       showToast("error", err.message || "Failed to log feeding");
@@ -85,11 +135,12 @@ export default function Feedings() {
   };
 
   const deleteFeeding = async (id) => {
-    if (!window.confirm("Delete this feeding record? This cannot be undone.")) return;
+    if (!window.confirm("Delete this feeding record? This cannot be undone."))
+      return;
     try {
       const res = await fetch(`${api}/api/feedings/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || "Delete failed");
@@ -101,14 +152,28 @@ export default function Feedings() {
   };
 
   return (
-    <div>
-      <h2>Animal Feedings</h2>
+    <div className="container container-wide">
+      <div className="header-row">
+        <h1>Animal Feedings</h1>
+      </div>
 
-      <div className="panel" style={{ marginBottom: 20 }}>
-        <form onSubmit={submit} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      {/* LOG FORM */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <form
+          onSubmit={submit}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
           <select
+            className="input"
             value={form.animal_id}
-            onChange={(e) => setForm({ ...form, animal_id: e.target.value })}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, animal_id: e.target.value }))
+            }
           >
             <option value="">Select Animal</option>
             {animals.map((a) => (
@@ -118,51 +183,111 @@ export default function Feedings() {
             ))}
           </select>
 
+          <select
+            className="input"
+            value={form.food_id}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, food_id: e.target.value }))
+            }
+          >
+            <option value="">Select Food</option>
+            {foods.map((f) => (
+              <option key={f.food_id} value={f.food_id}>
+                {f.food_name}
+              </option>
+            ))}
+          </select>
+
           <input
-            type="datetime-local"
-            value={form.feeding_time}
-            onChange={(e) => setForm({ ...form, feeding_time: e.target.value })}
+            className="input"
+            type="number"
+            step="0.001"
+            placeholder="Amount (kg)"
+            value={form.feed_amount_kg}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, feed_amount_kg: e.target.value }))
+            }
           />
 
-          <button className="btn btn-primary">Log Feeding</button>
+          <input
+            className="input"
+            type="datetime-local"
+            value={form.feeding_time}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, feeding_time: e.target.value }))
+            }
+          />
+
+          <button className="btn">Log Feeding</button>
         </form>
       </div>
 
-      <h3>Past Feedings</h3>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Animal</th>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Animal ID</th>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Food</th>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Feeding Time</th>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Logged By</th>
-            <th style={{ padding: 8, textAlign: "left", borderBottom: "1px solid #ccc" }}>Employee ID</th>
-            {canEdit && <th style={{ padding: 8, textAlign: "center", borderBottom: "1px solid #ccc" }}>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {feedings.map((f) => (
-            <tr key={f.feeding_id} style={{ verticalAlign: "middle" }}>
-              <td style={{ padding: 8 }}>{f.animal_name}</td>
-              <td style={{ padding: 8 }}>{f.animal_id}</td>
-              <td style={{ padding: 8 }}>{f.food_name}</td>
-              <td style={{ padding: 8 }}>{new Date(f.feeding_time).toLocaleString()}</td>
-              <td style={{ padding: 8 }}>{`${f.employee_first_name} ${f.employee_last_name}`}</td>
-              <td style={{ padding: 8 }}>{f.feed_recorded_by}</td>
-              {canEdit && (
-                <td style={{ padding: 8, textAlign: "center" }}>
-                  <button className="btn btn-sm" onClick={() => nav(`/feedings/${f.feeding_id}`)}>View</button>
-                  <button className="btn btn-sm" onClick={() => nav(`/feedings/${f.feeding_id}/edit`)} style={{ margin: "0 5px" }}>Edit</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => deleteFeeding(f.feeding_id)}>Delete</button>
-                </td>
-              )}
+      {/* TABLE */}
+      <div className="card">
+        <h3>Past Feedings</h3>
+        <table className="table wide">
+          <thead>
+            <tr>
+              <th>Animal</th>
+              <th>Animal ID</th>
+              <th>Food</th>
+              <th>Feeding Time</th>
+              <th>Logged By</th>
+              <th>Employee ID</th>
+              {canEdit && <th>Actions</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {feedings.map((f) => (
+              <tr key={f.feeding_id}>
+                <td>{f.animal_name}</td>
+                <td>{f.animal_id}</td>
+                <td>{f.food_name}</td>
+                <td>{new Date(f.feeding_time).toLocaleString()}</td>
+                <td>{`${f.employee_first_name} ${f.employee_last_name}`}</td>
+                <td>{f.feed_recorded_by}</td>
+                {canEdit && (
+                  <td>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => nav(`/feedings/${f.feeding_id}`)}
+                    >
+                      View
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() =>
+                        nav(`/feedings/${f.feeding_id}/edit`)
+                      }
+                      style={{ margin: "0 5px" }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => deleteFeeding(f.feeding_id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {feedings.length === 0 && (
+              <tr>
+                <td colSpan={canEdit ? 7 : 6}>No feedings recorded yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      {toast.open && <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />}
+      {toast.open && (
+        <Toast
+          {...toast}
+          onClose={() => setToast({ ...toast, open: false })}
+        />
+      )}
     </div>
   );
 }

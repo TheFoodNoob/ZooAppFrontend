@@ -5,9 +5,7 @@ import { api } from "../../api";
 import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 import Toast from "../../components/Toast";
 
-const Badge = ({ on }) => (
-  <span className={`badge ${on ? "green" : ""}`}>{on ? "Active" : "Inactive"}</span>
-);
+
 
 function fmtDate(d) {
   if (!d) return "-";
@@ -59,7 +57,7 @@ const fields = useMemo(() => {
     ["Animal ID", feeding.animal_id || "-"],
     ["Fed By", `${feeding.employee_first_name} ${feeding.employee_last_name}` || "-"],
     ["Food", feeding.food_name || "-"],
-    ["Feeding Time", fmtDate(feeding.feeding_time)],
+    ["Feeding Time", new Date(feeding.feeding_time).toLocaleString()],
     ["Amount (kg)", feeding.feed_amount_kg ?? "-"],
     ["Feeding ID", <code key="id" style={{ userSelect: "all" }}>{feeding.feeding_id}</code>]
   ];

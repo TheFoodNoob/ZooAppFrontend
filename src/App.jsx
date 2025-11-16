@@ -1103,7 +1103,7 @@ export default function App() {
         <Route
           path="/feedings"
           element={
-            <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
+            <ProtectedRoute roles={["keeper", "admin", "ops_manager", "vet"]}>
               <Feedings />
             </ProtectedRoute>
           }

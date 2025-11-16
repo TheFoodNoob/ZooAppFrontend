@@ -39,12 +39,37 @@ export default function FeedingsEdit() {
   function setField(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   // load animals and foods for selects
-  useEffect(() => {
-    fetchAuth(`${api}/api/animals`, { headers: { Authorization: `Bearer ${token}` } }, logout)
-      .then(res => res.json()).then(setAnimals).catch(err => showToast("error", "Failed to load animals"));
-    fetchAuth(`${api}/api/food`, { headers: { Authorization: `Bearer ${token}` } }, logout)
-      .then(res => res.json()).then(setFoods).catch(err => showToast("error", "Failed to load foods"));
-  }, [token, logout]);
+useEffect(() => {
+  (async () => {
+    try {
+      const res = await fetchAuth(
+        `${api}/api/animals`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        logout
+      );
+      const { ok, data, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Failed to load animals");
+      setAnimals(Array.isArray(data) ? data : []);
+    } catch (e) {
+      showToast("error", e.message || "Failed to load animals");
+    }
+
+    try {
+      const res = await fetchAuth(
+        `${api}/api/food`,
+        { headers: { Authorization: `Bearer ${token}` } },
+        logout
+      );
+      const { ok, data, detail } = await parseJsonWithDetail(res);
+      if (!ok) throw new Error(detail || "Failed to load foods");
+      setFoods(Array.isArray(data) ? data : []);
+    } catch (e) {
+      showToast("error", e.message || "Failed to load foods");
+    }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [token, logout]);
+
 
   // load existing feeding
   useEffect(() => {
