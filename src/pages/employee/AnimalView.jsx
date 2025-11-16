@@ -1,3 +1,4 @@
+// src/pages/employee/AnimalView.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -5,25 +6,28 @@ import { api } from "../../api";
 import { fetchAuth, parseJsonWithDetail } from "../../utils/fetchAuth";
 import Toast from "../../components/Toast";
 
-const Badge = ({ on }) => (
-  <span className={`badge ${on ? "green" : ""}`}>{on ? "Active" : "Inactive"}</span>
+const Badge = ({ active }) => (
+  <span className={`badge ${active ? "green" : ""}`}>
+    {active ? "Active" : "Inactive"}
+  </span>
 );
 
 function fmtDate(d) {
   if (!d) return "-";
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  try { return new Date(d).toISOString().slice(0, 10); } catch { return String(d); }
-}
-
-function fmtBool(b) {
-  return <Badge on={b} />;
+  try {
+    return new Date(d).toISOString().slice(0, 10);
+  } catch {
+    return String(d);
+  }
 }
 
 export default function AnimalView() {
   const { id } = useParams();
   const nav = useNavigate();
   const { logout, token, user } = useAuth();
-  const canEdit = user?.role === "admin" || user?.role === "vet" || user?.role === "keeper";
+  const canEdit =
+    user?.role === "admin" || user?.role === "vet" || user?.role === "keeper";
 
   const [animal, setAnimal] = useState(null);
   const [err, setErr] = useState("");
@@ -33,7 +37,10 @@ export default function AnimalView() {
   const showToast = (type, text) => setToast({ open: true, type, text });
   useEffect(() => {
     if (!toast.open) return;
-    const t = setTimeout(() => setToast(s => ({ ...s, open: false })), 2500);
+    const t = setTimeout(
+      () => setToast((s) => ({ ...s, open: false })),
+      2500
+    );
     return () => clearTimeout(t);
   }, [toast.open]);
 
@@ -53,7 +60,11 @@ export default function AnimalView() {
       showToast("error", e.message);
     }
   }
-  useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const fields = useMemo(() => {
     if (!animal) return [];
@@ -63,24 +74,43 @@ export default function AnimalView() {
       ["Date of Birth", fmtDate(animal.birth_date)],
       ["Sex", animal.sex || "-"],
       ["Weight (kg)", animal.weight_kg ?? "-"],
-      ["Enclosure", animal.exhibit || "-"],
-      ["Status", <Badge key="status" on={animal.animal_status} />],
-      ["Animal ID", <code key="id" style={{ userSelect: "all" }}>{animal.animal_id}</code>],
-      ["Notes", animal.notes || "N/A"]
+      ["Exhibit", animal.exhibit || "-"],
+      [
+        "Status",
+        <Badge
+          key="status"
+          active={animal.animal_status === "Active"}
+        />,
+      ],
+      [
+        "Animal ID",
+        <code key="id" style={{ userSelect: "all" }}>
+          {animal.animal_id}
+        </code>,
+      ],
+      ["Origin Type", animal.origin_type || "-"],
+      ["Origin Location", animal.origin_location || "-"],
     ];
   }, [animal]);
 
   async function deleteAnimal() {
     try {
-      const res = await fetchAuth(`${api}/api/animals/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      }, logout);
+      const res = await fetchAuth(
+        `${api}/api/animals/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        logout
+      );
       const info = await parseJsonWithDetail(res);
       if (!info.ok) throw new Error(info.detail || "Delete failed");
       showToast("success", "Animal deleted");
       setConfirmOpen(false);
-      setTimeout(() => nav("/animals", { replace: true }), 400);
+      setTimeout(
+        () => nav("/staff/animals", { replace: true }),
+        400
+      );
     } catch (e) {
       showToast("error", e.message);
     }
@@ -91,15 +121,34 @@ export default function AnimalView() {
       <div className="header-row">
         <h1>Animal Details</h1>
         <div className="row-gap">
-          <button className="btn" onClick={load}>Refresh</button>
-          {canEdit && <Link className="btn" to={`/animals/${id}/edit`}>Edit</Link>}
-          <Link className="btn" to="/animals">Back to list</Link>
-          {canEdit && <button className="btn" onClick={() => setConfirmOpen(true)}>Delete</button>}
+          <button className="btn" onClick={load}>
+            Refresh
+          </button>
+          {canEdit && (
+            <Link className="btn" to={`/staff/animals/${id}/edit`}>
+              Edit
+            </Link>
+          )}
+          <Link className="btn" to="/staff/animals">
+            Back to list
+          </Link>
+          {canEdit && (
+            <button
+              className="btn"
+              onClick={() => setConfirmOpen(true)}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
       <div className="card">
-        {err && <div className="error" style={{ marginBottom: 12 }}>{err}</div>}
+        {err && (
+          <div className="error" style={{ marginBottom: 12 }}>
+            {err}
+          </div>
+        )}
         {!animal ? (
           <div>Loading…</div>
         ) : (
@@ -126,23 +175,49 @@ export default function AnimalView() {
       />
 
       {toast.open && (
-        <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />
+        <Toast
+          {...toast}
+          onClose={() => setToast({ ...toast, open: false })}
+        />
       )}
     </div>
   );
 }
 
-// Reuse the ConfirmModal and Badge from EventView
-function ConfirmModal({ open, title, message, confirmText="Confirm", onConfirm, onCancel }) {
+// Simple confirm modal (duplicated here for isolation)
+function ConfirmModal({
+  open,
+  title,
+  message,
+  confirmText = "Confirm",
+  onConfirm,
+  onCancel,
+}) {
   if (!open) return null;
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.35)", display:"grid", placeItems:"center", zIndex:9998 }}>
-      <div className="card" style={{ width:"min(520px,90vw)" }}>
-        <h3 style={{ marginTop:0 }}>{title}</h3>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,.35)",
+        display: "grid",
+        placeItems: "center",
+        zIndex: 9998,
+      }}
+    >
+      <div className="card" style={{ width: "min(520px,90vw)" }}>
+        <h3 style={{ marginTop: 0 }}>{title}</h3>
         <p>{message}</p>
-        <div className="row-gap" style={{ display:"flex", justifyContent:"flex-end" }}>
-          <button className="btn" onClick={onCancel}>Cancel</button>
-          <button className="btn" onClick={onConfirm}>{confirmText}</button>
+        <div
+          className="row-gap"
+          style={{ display: "flex", justifyContent: "flex-end" }}
+        >
+          <button className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn" onClick={onConfirm}>
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>

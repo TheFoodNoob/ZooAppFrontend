@@ -1075,6 +1075,14 @@ export default function App() {
         }
       />
       <Route
+        path="/staff/animals/new"
+        element={
+          <ProtectedRoute roles={["admin", "ops_manager"]}>
+            <AnimalEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/staff/animals/:id"
         element={
           <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
@@ -1153,7 +1161,7 @@ export default function App() {
         <Route
           path="/reports/tickets"
           element={
-            <ProtectedRoute roles={["admin", "op_manager", "gate_agent"]}>
+            <ProtectedRoute roles={["admin", "ops_manager", "gate_agent"]}>
               <TicketStats />
             </ProtectedRoute>
           }

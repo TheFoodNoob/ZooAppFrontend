@@ -1,3 +1,4 @@
+// src/pages/employee/Animals.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -8,7 +9,14 @@ import { rowsToCsv, downloadCsv } from "../../utils/csv";
 
 const PAGE_SIZE = 10;
 
-function ConfirmModal({ open, title, message, confirmText = "Confirm", onConfirm, onCancel }) {
+function ConfirmModal({
+  open,
+  title,
+  message,
+  confirmText = "Confirm",
+  onConfirm,
+  onCancel,
+}) {
   if (!open) return null;
   return (
     <div
@@ -45,7 +53,10 @@ export default function Animals() {
   const showToast = (type, text) => setToast({ open: true, type, text });
   useEffect(() => {
     if (!toast.open) return;
-    const t = setTimeout(() => setToast((s) => ({ ...s, open: false })), 2500);
+    const t = setTimeout(
+      () => setToast((s) => ({ ...s, open: false })),
+      2500
+    );
     return () => clearTimeout(t);
   }, [toast.open]);
 
@@ -54,7 +65,7 @@ export default function Animals() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // Search & Filters
+  // Search
   const [q, setQ] = useState("");
 
   // Sorting
@@ -67,9 +78,9 @@ export default function Animals() {
   // Delete modal
   const [toDelete, setToDelete] = useState(null);
 
-  // Load animals
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function load() {
@@ -92,7 +103,7 @@ export default function Animals() {
     }
   }
 
-  // Filtering + Sorting
+  // Filtering + sorting
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     let out = rows.filter((r) =>
@@ -117,6 +128,7 @@ export default function Animals() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(page, totalPages);
+
   const paged = useMemo(() => {
     const startIdx = (pageSafe - 1) * PAGE_SIZE;
     return filtered.slice(startIdx, startIdx + PAGE_SIZE);
@@ -129,7 +141,10 @@ export default function Animals() {
     try {
       const res = await fetchAuth(
         `${api}/api/animals/${id}`,
-        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
         logout
       );
       const info = await parseJsonWithDetail(res);
@@ -155,8 +170,9 @@ export default function Animals() {
   }
 
   function onSort(k) {
-    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
+    if (sortKey === k) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
       setSortKey(k);
       setSortDir("asc");
     }
@@ -171,7 +187,7 @@ export default function Animals() {
             Export CSV
           </button>
           {(user?.role === "admin" || user?.role === "ops_manager") && (
-            <Link className="btn" to="/animals/new">
+            <Link className="btn" to="/staff/animals/new">
               + New Animal
             </Link>
           )}
@@ -191,10 +207,7 @@ export default function Animals() {
               />
             </div>
             <div className="field">
-              <button
-                className="btn block"
-                onClick={() => setQ("")}
-              >
+              <button className="btn block" onClick={() => setQ("")}>
                 Clear
               </button>
             </div>
@@ -212,16 +225,36 @@ export default function Animals() {
                   <thead>
                     <tr>
                       <th onClick={() => onSort("animal_name")}>
-                        Name {sortKey === "animal_name" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                        Name{" "}
+                        {sortKey === "animal_name"
+                          ? sortDir === "asc"
+                            ? "▲"
+                            : "▼"
+                          : ""}
                       </th>
                       <th onClick={() => onSort("species")}>
-                        Species {sortKey === "species" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                        Species{" "}
+                        {sortKey === "species"
+                          ? sortDir === "asc"
+                            ? "▲"
+                            : "▼"
+                          : ""}
                       </th>
                       <th onClick={() => onSort("exhibit")}>
-                        Exhibit {sortKey === "exhibit" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                        Exhibit{" "}
+                        {sortKey === "exhibit"
+                          ? sortDir === "asc"
+                            ? "▲"
+                            : "▼"
+                          : ""}
                       </th>
                       <th onClick={() => onSort("animal_status")}>
-                        Status {sortKey === "animal_status" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                        Status{" "}
+                        {sortKey === "animal_status"
+                          ? sortDir === "asc"
+                            ? "▲"
+                            : "▼"
+                          : ""}
                       </th>
                       <th>ID</th>
                       <th />
@@ -234,15 +267,27 @@ export default function Animals() {
                         <td>{a.species}</td>
                         <td>{a.exhibit}</td>
                         <td>{a.animal_status}</td>
-                        <td><code>{a.animal_id}</code></td>
                         <td>
-                          <Link className="btn btn-sm" to={`/animals/${a.animal_id}`}>
-                            View
-                          </Link>
-                          <Link className="btn btn-sm" to={`/animals/${a.animal_id}/edit`}>
-                            Edit
-                          </Link>
-                          <button className="btn btn-sm" onClick={() => setToDelete(a)}>
+                          <code>{a.animal_id}</code>
+                        </td>
+                        <td>
+                          <Link
+                          className="btn btn-sm"
+                          to={`/staff/animals/${a.animal_id}`}   // was `/animals/${a.animal_id}`
+                        >
+                          View
+                        </Link>
+
+                        <Link
+                          className="btn btn-sm"
+                          to={`/staff/animals/${a.animal_id}/edit`}   // was `/animals/${a.animal_id}/edit`
+                        >
+                          Edit
+                        </Link>
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => setToDelete(a)}
+                          >
                             Delete
                           </button>
                         </td>
@@ -266,14 +311,18 @@ export default function Animals() {
                   </button>
                   <button
                     className="btn"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    onClick={() =>
+                      setPage((p) => Math.max(1, p - 1))
+                    }
                     disabled={pageSafe <= 1}
                   >
                     ‹ Prev
                   </button>
                   <button
                     className="btn"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPages, p + 1))
+                    }
                     disabled={pageSafe >= totalPages}
                   >
                     Next ›
@@ -306,7 +355,10 @@ export default function Animals() {
       />
 
       {toast.open && (
-        <Toast {...toast} onClose={() => setToast({ ...toast, open: false })} />
+        <Toast
+          {...toast}
+          onClose={() => setToast({ ...toast, open: false })}
+        />
       )}
     </div>
   );

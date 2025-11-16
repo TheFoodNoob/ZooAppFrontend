@@ -56,7 +56,7 @@ export default function Dashboard() {
                 <Link to="/events" className="">manage events</Link>
               </li>
               <li> 
-                <Link to="/animals" className="">search animals</Link>
+                <Link to="/staff/animals" className="">search animals</Link>
               </li>
               <li>
                 <Link to = "/reports/tickets">view ticket statistics</Link>
