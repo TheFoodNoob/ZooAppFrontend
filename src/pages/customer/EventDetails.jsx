@@ -6,7 +6,13 @@ import { useAuth } from "../../context/AuthContext.jsx";
 
 /* ---------- Image helper ---------- */
 function getEventImg(evt) {
-  if (evt?.image_url && evt.image_url.trim()) return evt.image_url;
+  // Prefer DB slug
+  const slug = evt?.photo_slug && evt.photo_slug.trim();
+  if (slug) return `/img/events/${slug}`;
+
+  // Optional direct URL
+  const url = evt?.image_url && evt.image_url.trim();
+  if (url) return url;
 
   const hay = `${evt?.title || evt?.name || ""} ${evt?.event_title || ""} ${
     evt?.location || ""
@@ -15,10 +21,12 @@ function getEventImg(evt) {
   if (hay.includes("penguin")) return "/img/penguinparade.jpg";
   if (hay.includes("reptile") || hay.includes("snake") || hay.includes("lizard"))
     return "/img/reptile.jpg";
-  if (hay.includes("lion") || hay.includes("big cat")) return "/img/lion.webp";
+  if (hay.includes("lion") || hay.includes("big cat"))
+    return "/img/lion.webp";
   if (hay.includes("giraffe")) return "/img/giraffe.jpg";
   if (hay.includes("bird")) return "/img/birds.webp";
-  if (hay.includes("seal")) return "/img/harborSeal.webp";
+  if (hay.includes("seal") || hay.includes("sea lion"))
+    return "/img/harborSeal.webp";
   return "/img/bigSeal.jpg";
 }
 

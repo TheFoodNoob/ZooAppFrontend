@@ -31,16 +31,30 @@ function fmtTime(s) {
 
 /* Prefer explicit image_url; otherwise infer from name/location keywords */
 function getEventImg(evt) {
-  if (evt?.image_url) return evt.image_url;
+  // 1) Use explicit slug from DB → /public/img/events/<slug>
+  const slug = evt?.photo_slug && evt.photo_slug.trim();
+  if (slug) return `/img/events/${slug}`;
 
-  const name = `${evt?.name || evt?.title || ""} ${evt?.location || ""}`.toLowerCase();
+  // 2) Optional full URL field
+  const url = evt?.image_url && evt.image_url.trim();
+  if (url) return url;
 
-  if (name.includes("penguin")) return "/img/penguinparade.jpg";
-  if (name.includes("reptile") || name.includes("snake") || name.includes("lizard")) return "/img/reptile.jpg";
-  if (name.includes("lion") || name.includes("big cat")) return "/img/lion.webp";
-  if (name.includes("bird")) return "/img/birds.webp";
-  if (name.includes("safari") || name.includes("story")) return "/img/safaristorytime.jpg";
-  if (name.includes("seal") || name.includes("sea lion")) return "/img/harborSeal.webp";
+  // 3) Heuristic fallback based on name/location
+  const hay = `${evt?.name || evt?.title || ""} ${evt?.location || ""}`.toLowerCase();
+
+  if (hay.includes("penguin")) return "/img/penguinparade.jpg";
+  if (hay.includes("reptile") || hay.includes("snake") || hay.includes("lizard"))
+    return "/img/reptile.jpg";
+  if (hay.includes("lion") || hay.includes("big cat"))
+    return "/img/lion.webp";
+  if (hay.includes("giraffe"))
+    return "/img/giraffe.jpg";
+  if (hay.includes("bird"))
+    return "/img/birds.webp";
+  if (hay.includes("seal") || hay.includes("sea lion"))
+    return "/img/harborSeal.webp";
+
+  // Final fallback
   return "/img/bigSeal.jpg";
 }
 
