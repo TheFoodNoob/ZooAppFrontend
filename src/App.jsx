@@ -651,104 +651,117 @@ function Nav() {
   );
 
   // PUBLIC/CUSTOMER NAV LINKS
-  const PublicLinks = ({ onClick }) => (
-  <>
-    <li>
-      <NavLink
-        to="/"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Home
-      </NavLink>
-    </li>
-    <li>
-      <NavLink
-        to="/visit"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Visit
-      </NavLink>
-    </li>
-    <li>
-      <NavLink
-        to="/tickets"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Tickets
-      </NavLink>
-    </li>
-
-    {/* NEW: Memberships in main + mobile nav */}
-    <li>
-      <NavLink
-        to="/memberships"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Memberships
-      </NavLink>
-    </li>
-
-    <li>
-      <NavLink
-        to="/food"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Food
-      </NavLink>
-    </li>
-    <li>
-      <NavLink
-        to="/gift-shop"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        Gift Shop
-      </NavLink>
-    </li>
-
-    {/* Always show My Account; route is protected so
-        logged-out users are redirected to /login */}
-    <li>
-      <NavLink
-        to="/account"
-        className={({ isActive }) => (isActive ? "active" : "")}
-        onClick={onClick}
-      >
-        My Account
-      </NavLink>
-    </li>
-
-    {isCustomer ? (
-      <li>
-        <button
-          className="btn btn-ghost btn-sm"
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            logout();
-          }}
-        >
-          Logout
-        </button>
-      </li>
-    ) : (
+   const PublicLinks = ({ onClick }) => (
+    <>
       <li>
         <NavLink
-          to="/login"
+          to="/"
           className={({ isActive }) => (isActive ? "active" : "")}
           onClick={onClick}
         >
-          Login
+          Home
         </NavLink>
       </li>
-    )}
-  </>
-);
+
+      <li>
+        <NavLink
+          to="/visit"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Visit
+        </NavLink>
+      </li>
+
+      <li>
+        <NavLink
+          to="/tickets"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Tickets
+        </NavLink>
+      </li>
+
+      {/* NEW: Exhibits link (desktop + mobile share this) */}
+      <li>
+        <NavLink
+          to="/Exhibits"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Exhibits
+        </NavLink>
+      </li>
+
+      <li>
+        <NavLink
+          to="/memberships"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Memberships
+        </NavLink>
+      </li>
+
+      <li>
+        <NavLink
+          to="/food"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Food
+        </NavLink>
+      </li>
+
+      <li>
+        <NavLink
+          to="/gift-shop"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          Gift Shop
+        </NavLink>
+      </li>
+
+      {/* Always show My Account; route is protected so
+          logged-out users are redirected to /login */}
+      <li>
+        <NavLink
+          to="/account"
+          className={({ isActive }) => (isActive ? "active" : "")}
+          onClick={onClick}
+        >
+          My Account
+        </NavLink>
+      </li>
+
+      {isCustomer ? (
+        <li>
+          <button
+            className="btn btn-ghost btn-sm"
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              logout();
+            }}
+          >
+            Logout
+          </button>
+        </li>
+      ) : (
+        <li>
+          <NavLink
+            to="/login"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            onClick={onClick}
+          >
+            Login
+          </NavLink>
+        </li>
+      )}
+    </>
+  );
 
   return (
     <header

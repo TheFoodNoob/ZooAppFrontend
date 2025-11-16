@@ -1,3 +1,4 @@
+// src/pages/customer/GiftShop.jsx
 import React from "react";
 import { api } from "../../api";
 import PosCartSummary from "../../components/PosCartSummary.jsx";
@@ -15,17 +16,16 @@ function formatUSD(cents) {
 }
 
 // Shared helper for POS (food/gift) items
-// 👉 NO LONGER TOUCHES posCart QUANTITIES – only metadata
 function addPosItemToCart(item, categoryFallback) {
   const posId = String(item.pos_item_id ?? item.id);
 
-  // Metadata
   let meta = [];
   try {
     meta = JSON.parse(sessionStorage.getItem("posItems") || "[]");
   } catch {
     meta = [];
   }
+
   const already = meta.some((m) => String(m.pos_item_id ?? m.id) === posId);
   if (!already) {
     meta.push({
@@ -33,10 +33,11 @@ function addPosItemToCart(item, categoryFallback) {
       name: item.name,
       price_cents: Number(item.price_cents || 0),
       category: item.category || categoryFallback || null,
+      photo_slug: item.photo_slug || null,   // 👈 keep slug
     });
   }
-  sessionStorage.setItem("posItems", JSON.stringify(meta));
 
+  sessionStorage.setItem("posItems", JSON.stringify(meta));
   window.dispatchEvent(new Event("cart:changed"));
 }
 
@@ -71,6 +72,7 @@ export default function GiftShop() {
           name: it.name,
           price_cents: Number(it.price_cents || 0),
           category: it.category || CATEGORY,
+          photo_slug: it.photo_slug || null, // 👈 keep slug when seeding
         }));
 
         try {
@@ -161,7 +163,7 @@ export default function GiftShop() {
 
         {!loading && !error && (
           <>
-            {/* Catalog grid */}
+            {/* Catalog grid with images, like Food */}
             <div
               style={{
                 display: "grid",
@@ -174,6 +176,10 @@ export default function GiftShop() {
                 const id = it.pos_item_id ?? it.id;
                 const q = Number(qty[String(id)] || 0);
 
+                const photoSrc = it.photo_slug
+                  ? `/img/gift/${it.photo_slug}` // 👈 folder matches your structure
+                  : null;
+
                 return (
                   <article
                     key={id}
@@ -181,26 +187,59 @@ export default function GiftShop() {
                     style={{ display: "grid", gap: 8 }}
                   >
                     <div>
-                      <h3 style={{ marginBottom: 2 }}>{it.name}</h3>
                       <div
                         style={{
-                          fontWeight: 600,
-                          marginBottom: 4,
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "flex-start",
                         }}
                       >
-                        {formatUSD(it.price_cents)}
-                      </div>
-                      {it.description && (
-                        <div
-                          style={{
-                            fontSize: 14,
-                            color: "var(--muted)",
-                            minHeight: 40,
-                          }}
-                        >
-                          {it.description}
+                        {photoSrc && (
+                          <div
+                            style={{
+                              flex: "0 0 80px",
+                              height: 80,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              background: "#f2ebe0",
+                            }}
+                          >
+                            <img
+                              src={photoSrc}
+                              alt={it.name}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ marginBottom: 2 }}>{it.name}</h3>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {formatUSD(it.price_cents)}
+                          </div>
+                          {it.description && (
+                            <div
+                              style={{
+                                fontSize: 14,
+                                color: "var(--muted)",
+                                minHeight: 40,
+                              }}
+                            >
+                              {it.description}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     <div className="qty-row" style={{ marginTop: 6 }}>
@@ -255,15 +294,6 @@ export default function GiftShop() {
                 filterCategory="giftshop"
                 emptyMessage="We didn't find any gift shop items in your cart yet. Use the controls above to add souvenirs and merch for your visit."
               />
-              <p
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: "var(--muted)",
-                }}
-              >
-                
-              </p>
             </div>
           </>
         )}

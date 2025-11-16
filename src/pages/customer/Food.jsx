@@ -1,3 +1,4 @@
+// src/pages/customer/Food.jsx
 import React from "react";
 import { api } from "../../api";
 import PosCartSummary from "../../components/PosCartSummary.jsx";
@@ -34,6 +35,8 @@ function addPosItemToCart(item, categoryFallback) {
       name: item.name,
       price_cents: Number(item.price_cents || 0),
       category: item.category || categoryFallback || null,
+      // (optional) keep slug in metadata if you ever want images in cart:
+      photo_slug: item.photo_slug || null,
     });
   }
   sessionStorage.setItem("posItems", JSON.stringify(meta));
@@ -73,6 +76,7 @@ export default function Food() {
           name: it.name,
           price_cents: Number(it.price_cents || 0),
           category: it.category || CATEGORY,
+          photo_slug: it.photo_slug || null,
         }));
         try {
           const existing = JSON.parse(
@@ -162,7 +166,7 @@ export default function Food() {
 
         {!loading && !error && (
           <>
-            {/* Catalog grid – similar feel to ticket cards (but no images) */}
+            {/* Catalog grid with images */}
             <div
               style={{
                 display: "grid",
@@ -175,6 +179,11 @@ export default function Food() {
                 const id = it.pos_item_id ?? it.id;
                 const q = Number(qty[String(id)] || 0);
 
+                // build src from slug coming from DB
+                const photoSrc = it.photo_slug
+                  ? `/img/food/${it.photo_slug}`
+                  : null;
+
                 return (
                   <article
                     key={id}
@@ -182,26 +191,59 @@ export default function Food() {
                     style={{ display: "grid", gap: 8 }}
                   >
                     <div>
-                      <h3 style={{ marginBottom: 2 }}>{it.name}</h3>
                       <div
                         style={{
-                          fontWeight: 600,
-                          marginBottom: 4,
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "flex-start",
                         }}
                       >
-                        {formatUSD(it.price_cents)}
-                      </div>
-                      {it.description && (
-                        <div
-                          style={{
-                            fontSize: 14,
-                            color: "var(--muted)",
-                            minHeight: 40,
-                          }}
-                        >
-                          {it.description}
+                        {photoSrc && (
+                          <div
+                            style={{
+                              flex: "0 0 80px",
+                              height: 70,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              background: "#f2ebe0",
+                            }}
+                          >
+                            <img
+                              src={photoSrc}
+                              alt={it.name}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ marginBottom: 2 }}>{it.name}</h3>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {formatUSD(it.price_cents)}
+                          </div>
+                          {it.description && (
+                            <div
+                              style={{
+                                fontSize: 14,
+                                color: "var(--muted)",
+                                minHeight: 40,
+                              }}
+                            >
+                              {it.description}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     <div className="qty-row" style={{ marginTop: 6 }}>
@@ -244,7 +286,6 @@ export default function Food() {
               )}
             </div>
 
-            {/* Summary for just FOOD items, styled like ticket summary */}
             <div
               className="panel"
               style={{ marginTop: 20, background: "#fff8e1" }}
@@ -254,15 +295,6 @@ export default function Food() {
                 filterCategory="food"
                 emptyMessage="We didn't find any food or drink items in your cart yet. Use the controls above to add snacks and drinks for your visit."
               />
-              <p
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: "var(--muted)",
-                }}
-              >
-                
-              </p>
             </div>
           </>
         )}
