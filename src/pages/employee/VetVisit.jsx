@@ -25,7 +25,6 @@ export default function VetVisitsPage() {
         if (!res.ok) throw new Error("Failed to fetch vet visits");
         const data = await res.json();
         setVetVisits(data);
-        console.log(data);
       } catch (err) {
         console.error(err);
         setError("Failed to load vet visits");

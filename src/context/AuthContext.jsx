@@ -2,79 +2,31 @@
 import React, {
   createContext,
   useContext,
-  useCallback,
   useEffect,
   useState,
   useMemo,
+  useCallback,
 } from "react";
 import { api } from "../api";
 
 const AuthCtx = createContext(null);
 
-// Hook: useAuth()
+// Hook: useAuth
 export function useAuth() {
   return useContext(AuthCtx);
 }
 
 // Provider: AuthProvider
 export function AuthProvider({ children }) {
-  /* ---------- STAFF JWT (NOW sessionStorage-based) ---------- */
-  const [token, setToken] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      // Prefer sessionStorage so staff login dies when browser/tab closes
-      const fromSession = window.sessionStorage.getItem("authToken");
-      if (fromSession) return fromSession;
+  const [token, setToken] = useState("");
+  const [customerToken, setCustomerToken] = useState("");
+  const [user, setUser] = useState(null);
 
-      // Fallback: if we previously stored it in localStorage, use it once
-      const fromLocal = window.localStorage.getItem("authToken");
-      return fromLocal || "";
-    } catch {
-      return "";
-    }
-  });
-
-  /* ---------- CUSTOMER JWT (sessionStorage-based) ---------- */
-  const [customerToken, setCustomerToken] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const fromSession = window.sessionStorage.getItem("customerToken");
-      if (fromSession) return fromSession;
-
-      const fromLocal = window.localStorage.getItem("customerToken");
-      return fromLocal || "";
-    } catch {
-      return "";
-    }
-  });
-
-  /* ---------- Single user object (staff OR customer) ---------- */
-  const [user, setUser] = useState(() => {
-    if (typeof window === "undefined") return null;
-
-    try {
-      // Prefer sessionStorage for customers
-      const sessionVal = window.sessionStorage.getItem("customerSession");
-      if (sessionVal) {
-        return JSON.parse(sessionVal);
-      }
-
-      // Fallback to old localStorage (in case of existing data)
-      const stored = window.localStorage.getItem("customerSession");
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch {
-      // ignore parse errors
-    }
-
-    // Staff user will be loaded via /api/employee/me when staff token is set
-    return null;
-  });
-
+  // <-- initializing state tracks loading during first auth check -->
+  const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Helper for making authenticated STAFF requests with the STAFF JWT
+  // Helper for staff requests
   const authFetch = useCallback(
     async (url, opts = {}) => {
       const headers = {
@@ -86,71 +38,82 @@ export function AuthProvider({ children }) {
     [token]
   );
 
-  /* ---------- Load staff profile when STAFF token changes ---------- */
+  // Load tokens and user on first render
   useEffect(() => {
-    let cancelled = false;
-    if (!token) return;
-
-    (async () => {
+    const init = async () => {
       try {
-        const r = await authFetch(`${api}/api/employee/me`);
-        if (!r.ok) throw new Error("Auth check failed");
+        // Load staff token
+        const sessionStaff = typeof window !== "undefined" ? window.sessionStorage.getItem("authToken") : null;
+        const localStaff = typeof window !== "undefined" ? window.localStorage.getItem("authToken") : null;
+        const staffToken = sessionStaff || localStaff || "";
+        setToken(staffToken);
 
-        const me = await r.json().catch(() => ({}));
-        if (!cancelled) setUser(me || null);
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-          setToken("");
-          if (typeof window !== "undefined") {
-            // clean up both storages for safety
-            window.sessionStorage.removeItem("authToken");
-            window.localStorage.removeItem("authToken");
+        // Load customer token
+        const sessionCustomer = typeof window !== "undefined" ? window.sessionStorage.getItem("customerToken") : null;
+        const localCustomer = typeof window !== "undefined" ? window.localStorage.getItem("customerToken") : null;
+        const custToken = sessionCustomer || localCustomer || "";
+        setCustomerToken(custToken);
+
+        // Load user from customer session
+        let storedUser = null;
+        if (typeof window !== "undefined") {
+          const custSession = window.sessionStorage.getItem("customerSession");
+          const localSession = window.localStorage.getItem("customerSession");
+          if (custSession) storedUser = JSON.parse(custSession);
+          else if (localSession) storedUser = JSON.parse(localSession);
+        }
+
+        setUser(storedUser);
+
+        // If staff token exists, fetch staff profile
+        if (staffToken) {
+          const res = await fetch(`${api}/api/employee/me`, {
+            headers: { Authorization: `Bearer ${staffToken}` },
+          });
+          if (res.ok) {
+            const me = await res.json();
+            setUser(me);
+          } else {
+            setToken("");
+            if (typeof window !== "undefined") {
+              window.sessionStorage.removeItem("authToken");
+              window.localStorage.removeItem("authToken");
+            }
           }
         }
+      } catch {
+        setUser(null);
+        setToken("");
+        setCustomerToken("");
+      } finally {
+        setInitializing(false); // auth check finished
       }
-    })();
-
-    return () => {
-      cancelled = true;
     };
-  }, [token, authFetch]);
 
-  /* ---------- STAFF login ---------- */
-  async function loginEmployee(email, password) {
+    init();
+  }, []);
+
+  // Staff login
+  const loginEmployee = async (email, password) => {
+    setLoading(true);
     try {
-      setLoading(true);
-
       const r = await fetch(`${api}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        return { ok: false, error: j.error || "Login failed" };
-      }
+      const j = await r.json();
+      if (!r.ok) return { ok: false, error: j.error || "Login failed" };
 
       const tok = j.token;
       setToken(tok);
-      if (typeof window !== "undefined") {
-        // ✅ now: store in sessionStorage, not localStorage
-        window.sessionStorage.setItem("authToken", tok);
-        // clear any old persistent value
-        window.localStorage.removeItem("authToken");
-      }
+      if (typeof window !== "undefined") window.sessionStorage.setItem("authToken", tok);
 
-      // Load staff profile immediately after login
       const meRes = await fetch(`${api}/api/employee/me`, {
         headers: { Authorization: `Bearer ${tok}` },
       });
-      const me = await meRes.json().catch(() => ({}));
+      const me = await meRes.json();
       setUser(me || null);
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("auth:changed"));
-      }
 
       return { ok: true };
     } catch (e) {
@@ -158,57 +121,28 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  /* ---------- CUSTOMER login ---------- */
-  async function loginCustomer(email, password) {
+  // Customer login
+  const loginCustomer = async (email, password) => {
+    setLoading(true);
     try {
-      setLoading(true);
-
       const r = await fetch(`${api}/api/customer-auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      const j = await r.json();
+      if (!r.ok) return { ok: false, error: j.error || "Login failed" };
 
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        return { ok: false, error: j.error || "Login failed" };
-      }
-
-      const base =
-        j.customer ||
-        j.user || {
-          email: j.email || email,
-          first_name: j.first_name,
-          last_name: j.last_name,
-        };
-
-      const customerUser = {
-        ...base,
-        role: "customer",
-      };
-
+      const customerUser = { ...(j.customer || j.user || {}), role: "customer" };
       setUser(customerUser);
-
       const tok = j.token || "";
       setCustomerToken(tok);
 
       if (typeof window !== "undefined") {
-        // ✅ customer: sessionStorage only
-        window.sessionStorage.setItem(
-          "customerSession",
-          JSON.stringify(customerUser)
-        );
-        if (tok) {
-          window.sessionStorage.setItem("customerToken", tok);
-        }
-
-        // Clean up any old localStorage values from previous implementation
-        window.localStorage.removeItem("customerSession");
-        window.localStorage.removeItem("customerToken");
-
-        window.dispatchEvent(new Event("auth:changed"));
+        window.sessionStorage.setItem("customerSession", JSON.stringify(customerUser));
+        if (tok) window.sessionStorage.setItem("customerToken", tok);
       }
 
       return { ok: true };
@@ -217,44 +151,36 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  /* ---------- Logout (staff + customer) ---------- */
-  function logout() {
+  const logout = () => {
     setUser(null);
     setToken("");
     setCustomerToken("");
 
     if (typeof window !== "undefined") {
-      // Staff tokens
       window.sessionStorage.removeItem("authToken");
-      window.localStorage.removeItem("authToken");
-
-      // Customer – both the new session-based and old local-based keys
-      window.localStorage.removeItem("customerSession");
-      window.localStorage.removeItem("customerToken");
-      window.sessionStorage.removeItem("customerSession");
       window.sessionStorage.removeItem("customerToken");
-
-      window.dispatchEvent(new Event("auth:changed"));
+      window.sessionStorage.removeItem("customerSession");
+      window.localStorage.removeItem("authToken");
+      window.localStorage.removeItem("customerToken");
+      window.localStorage.removeItem("customerSession");
     }
-  }
+  };
 
   const value = useMemo(
     () => ({
-      token, // staff token
-      customerToken, // customer token
+      token,
+      customerToken,
       user,
       loading,
-      setToken,
-      setCustomerToken,
-      setUser,
-      authFetch, // staff helper
+      initializing,
+      authFetch,
       loginEmployee,
       loginCustomer,
       logout,
     }),
-    [token, customerToken, user, loading, authFetch]
+    [token, customerToken, user, loading, initializing, authFetch]
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

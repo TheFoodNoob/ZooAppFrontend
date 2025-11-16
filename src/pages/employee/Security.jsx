@@ -31,11 +31,14 @@ export default function Security() {
           </div>
         </div>
       </div>
-      <div className="panel">
+    </div>
+  );
+}
+
+
+/*<div className="panel">
         <ul>
         <li><Link to="/employees/security">view personel</Link></li>            
         </ul>
       </div>
-    </div>
-  );
-}
+*/

@@ -78,7 +78,7 @@ export default function VetVisitEdit() {
 
       if (!res.ok) throw new Error("Update failed");
 
-      navigate(`/vetvisits/${id}`);
+      navigate(`/vetvisit/${id}`);
     } catch (err) {
       console.error(err);
       setError("Failed to update vet visit.");

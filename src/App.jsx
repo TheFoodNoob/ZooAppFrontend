@@ -99,25 +99,36 @@ const ANY_EMP = [
 
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
-  const { user } = useAuth();
-  if (!user) return null;
-  const map = {
-    keeper: "/keeper",
-    vet: "/vet",
-    gate_agent: "/gate",
-    ops_manager: "/ops",
-    retail: "/retail",
-    coordinator: "/coord",
-    security: "/security",
-    admin: "/admin",
-  };
-  const dest = map[user.role] || "/dashboard";
-  return <Navigate to={dest} replace />;
-}
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!loading && user) {
+      const map = {
+        keeper: "/keeper",
+        vet: "/vet",
+        gate_agent: "/gate",
+        ops_manager: "/ops",
+        retail: "/retail",
+        coordinator: "/coord",
+        security: "/security",
+        admin: "/admin",
+      };
+      const dest = map[user.role] || "/dashboard";
+      navigate(dest, { replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  // Show null or a spinner while loading
+  if (loading || !user) return <div>Loading…</div>;
+
+  return null; // Nothing else to render
+}
 /* helper wrappers to block login pages when already authenticated */
 function RedirectIfAuthed({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
 
   if (!user) return children;
 
