@@ -2,6 +2,7 @@
 import React from "react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { Link } from "react-router-dom";   // ⬅️ NEW
 
 // Metadata for each exhibit: copy matches what you put in the DB
 const EXHIBIT_META = {
@@ -9,7 +10,7 @@ const EXHIBIT_META = {
     habitat: "Reptile House & Wetlands",
     description:
       "This exhibit combines aquatic, forest-floor, and rocky habitats to show the diversity of cold-blooded species. Visitors can see reptiles basking for heat and amphibians in moist environments.",
-    photo: "reptiles-amphibians.webp", // /public/img/exhibits/reptiles-amphibians.webp
+    photo: "reptiles-amphibians.webp",
   },
   Birds: {
     habitat: "Aviary Loop",
@@ -52,31 +53,22 @@ export default function Exhibits() {
         let data;
 
         if (!token) {
-          // Logged-out: go straight to public endpoint
           const res = await fetch(`${api}/api/public/animals-per-exhibit`);
-          if (!res.ok) {
-            throw new Error(`Failed to load exhibits (${res.status})`);
-          }
+          if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
           data = await res.json();
           setIsPublic(true);
         } else {
-          // Logged-in with staff token: try protected first, then fall back
           let res = await fetch(`${api}/api/reports/animals-per-exhibit`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
           if (res.status === 401 || res.status === 403) {
-            // Not authorized for staff report – fall back to public view
             res = await fetch(`${api}/api/public/animals-per-exhibit`);
-            if (!res.ok) {
-              throw new Error(`Failed to load exhibits (${res.status})`);
-            }
+            if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
             data = await res.json();
             setIsPublic(true);
           } else {
-            if (!res.ok) {
-              throw new Error(`Failed to load exhibits (${res.status})`);
-            }
+            if (!res.ok) throw new Error(`Failed to load exhibits (${res.status})`);
             data = await res.json();
             setIsPublic(false);
           }
@@ -91,7 +83,6 @@ export default function Exhibits() {
     })();
   }, [token]);
 
-  // Sort by exhibit name for a stable, nice-looking list
   const sorted = [...rows].sort((a, b) =>
     String(a.exhibit || "").localeCompare(String(b.exhibit || ""))
   );
@@ -127,58 +118,63 @@ export default function Exhibits() {
               : "Staff view: data comes directly from the animals-per-exhibit report."}
           </div>
 
-          <div
-            className="exhibits-list"
-            style={{
-              padding: 12,
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            {loading && <div>Loading…</div>}
-            {err && <div className="error">{err}</div>}
-            {!loading && !err && sorted.length === 0 && (
+          {loading && (
+            <div style={{ padding: 16 }}>
+              <div>Loading…</div>
+            </div>
+          )}
+
+          {!loading && err && (
+            <div style={{ padding: 16 }}>
+              <div className="error">{err}</div>
+            </div>
+          )}
+
+          {!loading && !err && sorted.length === 0 && (
+            <div style={{ padding: 16 }}>
               <div>No exhibits found.</div>
-            )}
+            </div>
+          )}
 
-            {!loading &&
-            !err &&
-            sorted.map((r, i) => {
-              const name = r.exhibit || "Exhibit";
-              const meta = EXHIBIT_META[name] || {};
-              const count = Number(r.animal_count ?? 0);
-              const label = count === 1 ? "animal" : "animals";
-              const photoSrc = meta.photo
-                ? `/img/exhibits/${meta.photo}`
-                : null;
+          {!loading && !err && sorted.length > 0 && (
+            <div
+              className="exhibits-grid"
+              style={{
+                padding: 16,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 16,
+              }}
+            >
+              {sorted.map((r, i) => {
+                const name = r.exhibit || "Exhibit";
+                const meta = EXHIBIT_META[name] || {};
+                const count = Number(r.animal_count ?? 0);
+                const label = count === 1 ? "animal" : "animals";
+                const photoSrc = meta.photo
+                  ? `/img/exhibits/${meta.photo}`
+                  : null;
 
-              return (
-                <section
-                  key={`${name}-${i}`}
-                  className="card"
-                  style={{
-                    margin: 0,
-                    borderRadius: 14,
-                    border: "1px solid #f3e8c8",
-                    background: "#fffdf5",
-                    padding: "10px 14px",
-                  }}
-                >
-                  <div
+                return (
+                  <article
+                    key={`${name}-${i}`}
+                    className="card"
                     style={{
+                      margin: 0,
+                      borderRadius: 14,
+                      border: "1px solid #f3e8c8",
+                      background: "#fffdf5",
+                      overflow: "hidden",
                       display: "flex",
-                      gap: 12,
+                      flexDirection: "column",
                     }}
                   >
                     {photoSrc && (
                       <div
                         style={{
-                          flex: "0 0 88px",
-                          height: 70,
-                          borderRadius: 10,
-                          overflow: "hidden",
+                          height: 140,
                           background: "#e9e2cf",
+                          overflow: "hidden",
                         }}
                       >
                         <img
@@ -194,14 +190,21 @@ export default function Exhibits() {
                       </div>
                     )}
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        padding: "10px 12px 12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        flex: 1,
+                      }}
+                    >
                       <div
                         style={{
                           display: "flex",
                           alignItems: "baseline",
                           justifyContent: "space-between",
-                          gap: 10,
-                          marginBottom: 4,
+                          gap: 8,
                         }}
                       >
                         <h3
@@ -214,22 +217,24 @@ export default function Exhibits() {
                           {name}
                         </h3>
 
-                        <div
+                        <span
                           style={{
-                            fontSize: 13,
+                            fontSize: 12,
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: "#f7e9c7",
+                            color: "#5b4633",
                             whiteSpace: "nowrap",
-                            opacity: 0.85,
                           }}
                         >
-                          <strong>{count}</strong> {label}
-                        </div>
+                          {count} {label}
+                        </span>
                       </div>
 
                       {meta.habitat && (
                         <div
                           style={{
                             fontSize: 12,
-                            marginBottom: 4,
                             color: "#6b5b3a",
                           }}
                         >
@@ -240,6 +245,7 @@ export default function Exhibits() {
                       <p
                         style={{
                           margin: 0,
+                          marginTop: 4,
                           fontSize: 14,
                           color: "#5b4633",
                         }}
@@ -247,12 +253,19 @@ export default function Exhibits() {
                         {meta.description ||
                           "This exhibit groups animals that share a similar habitat and care needs."}
                       </p>
+
+                      {/* View animals link */}
+                      <div style={{ marginTop: 10 }}>
+                      <Link to="/animals" className="btn btn-primary btn-sm">
+                        View animals
+                      </Link>
                     </div>
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
 
           {isPublic && (
             <div

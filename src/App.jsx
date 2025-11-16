@@ -382,7 +382,7 @@ function KeeperDash() {
       <div>
         <ul>
           <li>
-            <Link to="/animals">animal directory</Link>
+            <Link to="/staff/animals">animal directory</Link>
           </li>
           <li>
             <Link to="/feedings">view feeding logs</Link>
@@ -889,7 +889,7 @@ export default function App() {
         <Route path="/visit" element={<Visit />} />
         <Route path="/visit/:id" element={<EventDetails />} />
         <Route path="/tickets" element={<CTickets />} />
-        {/*<Route path="/animals" element={<CAnimals />} />*/}
+        <Route path="/animals" element={<CAnimals />} />
         <Route path="/Exhibits" element={<ExhibitsPage />} />
         <Route path="/request" element={<RequestReceived />} />
         <Route path="scheduleEvents" element={<ZooScheduler />} />
@@ -1067,29 +1067,29 @@ export default function App() {
 
         {/* Animals (employee) */}
         <Route
-          path="/animals"
-          element={
-            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-              <Animals />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/animals/:id"
-          element={
-            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-              <AnimalView />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/animals/:id/edit"
-          element={
-            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-              <AnimalEdit />
-            </ProtectedRoute>
-          }
-        />
+        path="/staff/animals"
+        element={
+          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+            <Animals />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/animals/:id"
+        element={
+          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+            <AnimalView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/animals/:id/edit"
+        element={
+          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+            <AnimalEdit />
+          </ProtectedRoute>
+        }
+      />
 
         {/* Feedings (keeper) */}
         <Route
