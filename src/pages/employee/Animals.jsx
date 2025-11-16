@@ -171,7 +171,7 @@ export default function Animals() {
             Export CSV
           </button>
           {(user?.role === "admin" || user?.role === "ops_manager") && (
-            <Link className="btn" to="/animals/new">
+            <Link className="btn" to="/animals/new/edit">
               + New Animal
             </Link>
           )}

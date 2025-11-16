@@ -375,16 +375,24 @@ function KeeperDash() {
           </table>
         </div>
       )}
-      <div>
-        <ul>
-          <li>
-            <Link to="/animals">animal directory</Link>
-          </li>
-          <li>
-            <Link to="/feedings">view feeding logs</Link>
-          </li>
-        </ul>
+            <div
+        style={{
+          display: "flex",
+          gap: 12,
+          marginTop: 20,
+          justifyContent: "flex-start",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link to="/animals" className="btn btn-primary">
+          Animal Directory
+        </Link>
+
+        <Link to="/feedings" className="btn btn-primary">
+          View Feeding Logs
+        </Link>
       </div>
+
     </CardPage>
   );
 }
@@ -691,6 +699,16 @@ function Nav() {
           Gift Shop
         </NavLink>
       </li>
+      <li>
+  <NavLink
+    to="/memberships"
+    className={({ isActive }) => (isActive ? "active" : "")}
+    onClick={onClick}
+  >
+    Become a Member
+  </NavLink>
+</li>
+
 
       {/* Always show My Account; route is protected so
           logged-out users are redirected to /login */}
@@ -1042,6 +1060,15 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/animals/new"
+  element={
+    <ProtectedRoute roles={["admin", "ops_manager"]}>
+      <AnimalEdit />
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/animals/:id/edit"
           element={

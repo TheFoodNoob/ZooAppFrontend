@@ -18,7 +18,7 @@ function toInt(v) { const n = Number(v); return Number.isFinite(n) ? n : NaN; }
 
 export default function AnimalEdit() {
   const { id } = useParams();
-  const isNew = !id;
+  const isNew = id === "new";
   const nav = useNavigate();
   const { logout, token } = useAuth();
 
