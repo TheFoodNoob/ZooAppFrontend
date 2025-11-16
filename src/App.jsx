@@ -1025,7 +1025,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/employees/:role" element={<ProtectedRolePage />} />
+        
+        {/* <Route path="/employees/:role" element={<ProtectedRolePage />} /> */}
 
         {/* Admin hub */}
         <Route
