@@ -2106,7 +2106,7 @@ export default function Reports() {
                       </thead>
                       <tbody>
                         {filteredVisits.map((v) => (
-                          <tr key={v.visit_id}>
+                          <tr key={v.id}>
                             {visitsCols.visit_id && <td>{v.id}</td>}
                             {visitsCols.visit_date && (
                               <td>{new Date(v.visit_date).toLocaleString()}</td>
