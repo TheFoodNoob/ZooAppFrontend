@@ -60,6 +60,7 @@ import Dashboard from "./pages/employee/Dashboard.jsx";
 import Animals from "./pages/employee/Animals.jsx";
 import Employees from "./pages/employee/Employees.jsx";
 import Reports from "./pages/employee/Reports.jsx";
+import MedicalReports from "./pages/employee/MedicalReports.jsx";
 import EmployeeView from "./pages/employee/EmployeeView.jsx";
 import EmployeeEdit from "./pages/employee/EmployeeEdit.jsx";
 import Events from "./pages/employee/Events.jsx";
@@ -1206,6 +1207,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={["admin", "ops_manager", "gate_agent"]}>
               <TicketStats />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/medical"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "vet"]}>
+              <MedicalReports />
             </ProtectedRoute>
           }
         />

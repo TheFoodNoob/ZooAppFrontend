@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { api } from "../../api";
 import fetchAuth from "../../utils/fetchAuth";
 import { useAuth } from "../../context/AuthContext";
+import MedicalLogSection from "../../components/MedicalLogSection.jsx";
 
 export default function VetVisitView() {
   const { id } = useParams();
@@ -91,6 +92,11 @@ export default function VetVisitView() {
       <div style={rowStyle}>
         <span style={labelStyle}>Vet User ID:</span> {visit.vet_user_id}
       </div>
+      <MedicalLogSection
+        animalId={visit.animal_id}
+        vetVisitId={visit.id}   // use whatever your PK field is
+        title="Medical notes for this visit"
+      />
 
       <div style={{ marginTop: "20px" }}>
         <Link to="/vetvisit" style={backLinkStyle}>

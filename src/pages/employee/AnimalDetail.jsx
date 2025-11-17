@@ -4,11 +4,12 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import fetchAuth from "../../utils/fetchAuth";
 import { useAuth } from "../../context/AuthContext";
+import MedicalLogSection from "../../components/MedicalLogSection.jsx";
 
 export default function AnimalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [animal, setAnimal] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,8 @@ export default function AnimalDetail() {
   const [recentVisits, setRecentVisits] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(true);
   const [visitsError, setVisitsError] = useState("");
+
+  const canCreateVisit = user && ["vet", "admin"].includes(user.role);
 
   // --- load animal details ---
   useEffect(() => {
@@ -29,7 +32,6 @@ export default function AnimalDetail() {
         });
         if (!res.ok) throw new Error("Failed to fetch animal");
         const data = await res.json();
-        // if your API returns an array, pick first row
         setAnimal(Array.isArray(data) ? data[0] : data);
       } catch (err) {
         console.error(err);
@@ -61,12 +63,12 @@ export default function AnimalDetail() {
           ? raw.results
           : [];
 
-        // filter for this animal + sort newest first
         const filtered = list
           .filter((v) => String(v.animal_id) === String(id))
           .sort(
             (a, b) =>
-              new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime()
+              new Date(b.visit_date).getTime() -
+              new Date(a.visit_date).getTime()
           )
           .slice(0, 5);
 
@@ -134,27 +136,31 @@ export default function AnimalDetail() {
             </span>
           </h1>
           <div style={{ color: "#666", fontSize: "0.9rem" }}>
-            {animal.exhibit_name || animal.exhibit
-              ? `Exhibit: ${animal.exhibit_name || animal.exhibit}`
+            {animal.exhibit || animal.exhibit_name
+              ? `Exhibit: ${animal.exhibit || animal.exhibit_name}`
               : ""}
           </div>
         </div>
 
-        {/* Create new vet visit for this animal */}
-        <button
-          type="button"
-          className="btn btn-small btn-primary"
-          onClick={() => navigate(`/vetvisit/new?animal_id=${animal.animal_id}`)}
-        >
-          + New Vet Visit
-        </button>
+        {canCreateVisit && (
+          <button
+            type="button"
+            className="btn btn-small btn-primary"
+            onClick={() =>
+              navigate(`/vetvisit/new?animal_id=${animal.animal_id}`)
+            }
+          >
+            + New Vet Visit
+          </button>
+        )}
       </div>
 
       {/* Core fields */}
       <div style={rowStyle}>
         <span style={labelStyle}>Species:</span>
         <span>
-          {animal.species_name ||
+          {animal.species ||
+            animal.species_name ||
             animal.common_name ||
             animal.scientific_name ||
             "—"}
@@ -163,7 +169,7 @@ export default function AnimalDetail() {
 
       <div style={rowStyle}>
         <span style={labelStyle}>Exhibit:</span>
-        <span>{animal.exhibit_name || animal.exhibit || "—"}</span>
+        <span>{animal.exhibit || animal.exhibit_name || "—"}</span>
       </div>
 
       <div style={rowStyle}>
@@ -173,12 +179,17 @@ export default function AnimalDetail() {
 
       <div style={rowStyle}>
         <span style={labelStyle}>Date of Birth:</span>
-        <span>{animal.date_of_birth || "—"}</span>
+        <span>{animal.birth_date || animal.date_of_birth || "—"}</span>
       </div>
 
       <div style={rowStyle}>
         <span style={labelStyle}>Status:</span>
-        <span>{animal.status || animal.health_status || "—"}</span>
+        <span>
+          {animal.animal_status ||
+            animal.status ||
+            animal.health_status ||
+            "—"}
+        </span>
       </div>
 
       <div style={rowStyle}>
@@ -233,6 +244,12 @@ export default function AnimalDetail() {
           </>
         )}
       </div>
+
+      {/* Medical log for this animal */}
+      <MedicalLogSection
+        animalId={animal.animal_id}
+        recentVisits={recentVisits}
+      />
 
       <div style={{ marginTop: 20 }}>
         <Link to="/animals/directory" style={{ color: "#1976d2" }}>
