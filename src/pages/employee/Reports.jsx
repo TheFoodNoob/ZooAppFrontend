@@ -100,6 +100,32 @@ export default function Reports() {
   const [prodLoading, setProdLoading] = useState(false);
   const [prodError, setProdError] = useState("");
 
+  // Custom revenue explorer (advanced)
+  const [crFrom, setCrFrom] = useState(msDefaults.from);
+  const [crTo, setCrTo] = useState(msDefaults.to);
+  const [crMetric, setCrMetric] = useState("revenue"); // 'revenue' | 'units'
+  const [crGroupBy, setCrGroupBy] = useState("source_type");
+
+  const [crSourceTypes, setCrSourceTypes] = useState({
+    Ticket: true,
+    POS: true,
+    Membership: true,
+    Donation: true,
+  });
+
+  const [crMembershipTiers, setCrMembershipTiers] = useState(""); // comma-separated
+  const [crPosBuckets, setCrPosBuckets] = useState({
+    Food: true,
+    Merch: true,
+  });
+  const [crChannel, setCrChannel] = useState(""); // "", "online", "onsite", "staff"
+  const [crMinAmount, setCrMinAmount] = useState(""); // dollars
+  const [crMaxAmount, setCrMaxAmount] = useState(""); // dollars
+
+  const [crRows, setCrRows] = useState([]);
+  const [crLoading, setCrLoading] = useState(false);
+  const [crError, setCrError] = useState("");
+
 
   // ---------- FILTER / CONFIG STATE ----------
   // Animals per exhibit
@@ -184,6 +210,14 @@ export default function Reports() {
     online_count: true,
     onsite_count: true,
     staff_count: true,
+  });
+  // Custom revenue explorer columns
+  const [crCols, setCrCols] = useState({
+    group_key: true,
+    source_type: true,
+    units: true,
+    revenue_cents: true,
+    metric_value: true,
   });
 
   // ---------- LOAD DATA ONCE (animals, visits) ----------
@@ -466,6 +500,95 @@ export default function Reports() {
       .finally(() => setProdLoading(false));
   }, [token, reportType, insShowProductPerf, insCategory, insFrom, insTo]);
 
+   // ---------- LOAD INSIGHTS: custom revenue explorer ----------
+  useEffect(() => {
+    if (!token) return;
+    if (reportType !== "customRevenue") return;
+
+    const activeSourceTypes = Object.entries(crSourceTypes)
+      .filter(([, on]) => on)
+      .map(([k]) => k);
+
+    const activePosBuckets = Object.entries(crPosBuckets)
+      .filter(([, on]) => on)
+      .map(([k]) => k);
+
+    const tiers = crMembershipTiers
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const filters = {};
+
+    if (activeSourceTypes.length) {
+      filters.sourceTypes = activeSourceTypes;
+    }
+    if (activePosBuckets.length && activeSourceTypes.includes("POS")) {
+      filters.posBuckets = activePosBuckets;
+    }
+    if (tiers.length && activeSourceTypes.includes("Membership")) {
+      filters.membershipTiers = tiers;
+    }
+    if (crChannel) {
+      filters.channel = crChannel;
+    }
+    if (crMinAmount) {
+      filters.minAmount = Math.round(Number(crMinAmount) * 100); // dollars → cents
+    }
+    if (crMaxAmount) {
+      filters.maxAmount = Math.round(Number(crMaxAmount) * 100);
+    }
+
+    const body = {
+      from: crFrom,
+      to: crTo,
+      metric: crMetric, // 'revenue' | 'units'
+      groupBy: crGroupBy,
+      filters,
+    };
+
+    setCrLoading(true);
+    setCrError("");
+    fetchAuth(`${api}/api/reports/insights/custom-revenue`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load custom revenue insights");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setCrRows(Array.isArray(data.rows) ? data.rows : []);
+      })
+      .catch((err) => {
+        console.error(err);
+        setCrError(
+          err.message || "Failed to load custom revenue insights."
+        );
+        setCrRows([]);
+      })
+      .finally(() => setCrLoading(false));
+  }, [
+    token,
+    reportType,
+    crFrom,
+    crTo,
+    crMetric,
+    crGroupBy,
+    crSourceTypes,
+    crMembershipTiers,
+    crPosBuckets,
+    crChannel,
+    crMinAmount,
+    crMaxAmount,
+  ]);
+
 
   // ---------- DERIVED / FILTERED DATA ----------
   const filteredAnimals = useMemo(() => {
@@ -713,6 +836,9 @@ export default function Reports() {
             >
               <option value="insightsDashboard">
                 Insights dashboard (custom)
+              </option>
+              <option value="customRevenue">
+                Custom revenue explorer (advanced)
               </option>
               <option value="animalsPerExhibit">
                 Animals per exhibit (summary)
@@ -1430,7 +1556,308 @@ export default function Reports() {
             </>
           )}
           
+             {reportType === "customRevenue" && (
+            <>
+              <hr style={{ margin: "12px 0" }} />
+              <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
+                Custom revenue explorer – filters
+              </h3>
 
+              {/* Date range */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      marginBottom: 4,
+                    }}
+                  >
+                    From date
+                  </label>
+                  <input
+                    type="date"
+                    value={crFrom}
+                    onChange={(e) => setCrFrom(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      marginBottom: 4,
+                    }}
+                  >
+                    To date
+                  </label>
+                  <input
+                    type="date"
+                    value={crTo}
+                    onChange={(e) => setCrTo(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                  />
+                </div>
+              </div>
+
+              {/* Metric + groupBy */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Metric
+                  </label>
+                  <select
+                    value={crMetric}
+                    onChange={(e) => setCrMetric(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                  >
+                    <option value="revenue">Revenue (cents)</option>
+                    <option value="units">Units sold</option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Group by
+                  </label>
+                  <select
+                    value={crGroupBy}
+                    onChange={(e) => setCrGroupBy(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                  >
+                    <option value="source_type">Source type</option>
+                    <option value="date">Date</option>
+                    <option value="month">Month</option>
+                    <option value="product_name">Product / ticket</option>
+                    <option value="membership_tier">Membership tier</option>
+                    <option value="pos_bucket">POS bucket (Food/Merch)</option>
+                    <option value="channel">Channel (online/onsite/staff)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Source types */}
+              <div style={{ marginBottom: 10 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Source types
+                </div>
+                {["Ticket", "POS", "Membership", "Donation"].map((st) => (
+                  <label
+                    key={st}
+                    style={{ display: "block", fontSize: "0.85rem" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={crSourceTypes[st]}
+                      onChange={() =>
+                        setCrSourceTypes((prev) => ({
+                          ...prev,
+                          [st]: !prev[st],
+                        }))
+                      }
+                    />{" "}
+                    {st}
+                  </label>
+                ))}
+              </div>
+
+              {/* Membership tiers (only if Membership selected) */}
+              <div style={{ marginBottom: 10 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Membership tiers (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={crMembershipTiers}
+                  onChange={(e) => setCrMembershipTiers(e.target.value)}
+                  style={{ width: "100%", padding: 6 }}
+                  placeholder="e.g. family, supporter, individual"
+                />
+              </div>
+
+              {/* POS buckets */}
+              <div style={{ marginBottom: 10 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  POS buckets
+                </div>
+                {["Food", "Merch"].map((b) => (
+                  <label
+                    key={b}
+                    style={{ display: "block", fontSize: "0.85rem" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={crPosBuckets[b]}
+                      onChange={() =>
+                        setCrPosBuckets((prev) => ({
+                          ...prev,
+                          [b]: !prev[b],
+                        }))
+                      }
+                    />{" "}
+                    {b}
+                  </label>
+                ))}
+              </div>
+
+              {/* Channel */}
+              <div style={{ marginBottom: 10 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Channel
+                </label>
+                <select
+                  value={crChannel}
+                  onChange={(e) => setCrChannel(e.target.value)}
+                  style={{ width: "100%", padding: 6 }}
+                >
+                  <option value="">All channels</option>
+                  <option value="online">Online</option>
+                  <option value="onsite">Onsite</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+
+              {/* Amount range */}
+              <div style={{ marginBottom: 10 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Amount range (per group, in dollars)
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+                    gap: 8,
+                  }}
+                >
+                  <input
+                    type="number"
+                    min={0}
+                    value={crMinAmount}
+                    onChange={(e) => setCrMinAmount(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={crMaxAmount}
+                    onChange={(e) => setCrMaxAmount(e.target.value)}
+                    style={{ width: "100%", padding: 6 }}
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+
+              {/* Columns for export / table */}
+              <div style={{ marginBottom: 10 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Columns
+                </div>
+                {[
+                  ["group_key", "Group key"],
+                  ["source_type", "Source type"],
+                  ["units", "Units"],
+                  ["revenue_cents", "Revenue (cents)"],
+                  ["metric_value", "Metric value"],
+                ].map(([key, label]) => (
+                  <label
+                    key={key}
+                    style={{ display: "block", fontSize: "0.85rem" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={crCols[key]}
+                      onChange={() => toggleCols(setCrCols, key)}
+                    />{" "}
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-small"
+                onClick={() =>
+                  exportToCSV(crRows, crCols, "custom-revenue-explorer.csv")
+                }
+                disabled={
+                  crLoading ||
+                  !crRows.length ||
+                  !Object.values(crCols).some(Boolean)
+                }
+              >
+                Export CSV
+              </button>
+            </>
+          )}
               
 
           {reportType === "medicalAlerts" && (
@@ -2187,6 +2614,86 @@ export default function Reports() {
                     </div>
                   )}
                 </div>
+              )}
+            </>
+          )}
+
+          {reportType === "customRevenue" && (
+            <>
+              <h2 style={{ marginTop: 0, marginBottom: 8 }}>
+                Custom revenue explorer
+              </h2>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#555",
+                  marginTop: 0,
+                  marginBottom: 8,
+                }}
+              >
+                Ad-hoc revenue view across tickets, POS, memberships, and
+                donations. Combine filters and groupings on the left to answer
+                specific business questions.
+              </p>
+
+              {crLoading && <div>Loading custom revenue insights…</div>}
+              {crError && (
+                <div style={{ color: "red", fontSize: "0.9rem" }}>
+                  {crError}
+                </div>
+              )}
+
+              {!crLoading && !crError && (
+                <>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#777",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Showing {crRows.length} groups • Metric:{" "}
+                    {crMetric === "revenue" ? "Revenue" : "Units"} • Grouped by{" "}
+                    {crGroupBy}
+                    {crFrom && ` • from ${crFrom}`}
+                    {crTo && ` to ${crTo}`}
+                  </div>
+
+                  <div className="table-wrapper">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          {crCols.group_key && <th>Group key</th>}
+                          {crCols.source_type && <th>Source type</th>}
+                          {crCols.units && <th>Units</th>}
+                          {crCols.revenue_cents && <th>Revenue</th>}
+                          {crCols.metric_value && <th>Metric value</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {crRows.map((row, idx) => (
+                          <tr key={idx}>
+                            {crCols.group_key && <td>{row.group_key}</td>}
+                            {crCols.source_type && (
+                              <td>{row.source_type}</td>
+                            )}
+                            {crCols.units && <td>{row.units}</td>}
+                            {crCols.revenue_cents && (
+                              <td>{formatMoneyFromCents(row.revenue_cents)}</td>
+                            )}
+                            {crCols.metric_value && (
+                              <td>
+                                {crMetric === "revenue"
+                                  ? formatMoneyFromCents(row.metric_value)
+                                  : row.metric_value}
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </>
           )}
