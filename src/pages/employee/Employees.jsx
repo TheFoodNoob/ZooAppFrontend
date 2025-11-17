@@ -345,7 +345,7 @@ export default function Employees() {
       <hr style={{ margin: "20px 0", borderColor: "var(--border)" }} />
       <h3 style={{ margin: "0 0 8px 0" }}>Search</h3>
       <div className="row" style={{ marginBottom: 14 }}>
-        <input className="input" placeholder="Search name, email, role, dept..." value={q} onChange={(e)=>setQ(e.target.value)} />
+        <input className="input" placeholder="Search name, email, role..." value={q} onChange={(e)=>setQ(e.target.value)} />
         <button className="btn" onClick={load}>Refresh</button>
       </div>
 
@@ -353,7 +353,7 @@ export default function Employees() {
         {loading ? <div>Loading…</div> : (
           <table className="table" style={{ width: "100%" }}>
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Active</th><th style={{ width: 260 }}>Actions</th></tr>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th style={{ width: 260 }}>Actions</th></tr>
             </thead>
             <tbody>
               {filtered.map((row) => (
@@ -361,7 +361,7 @@ export default function Employees() {
                   <td>{row.first_name} {row.last_name}</td>
                   <td>{row.email}</td>
                   <td>{row.role}</td>
-                  <td>{row.department_id}</td>
+                  {/* <td>{row.department_id}</td> */}
                   <td>{Number(row.is_active) ? "1" : "0"}</td>
                   <td>
                     <Link className="btn btn-sm" to={`/employees/${row.employee_id}`}>Info</Link>{" "}

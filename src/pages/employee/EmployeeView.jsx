@@ -59,7 +59,7 @@ export default function EmployeeView() {
           <div><label>Email</label><div>{safe(emp.email)}</div></div>
           <div><label>Phone</label><div>{safe(emp.phone)}</div></div>
           <div><label>Role</label><div>{safe(emp.role)}</div></div>
-          <div><label>Department</label><div>{safe(emp.department_id)}</div></div>
+          {/* <div><label>Department</label><div>{safe(emp.department_id)}</div></div> */}
           <div><label>Job title</label><div>{safe(emp.job_title)}</div></div>
           <div><label>Active</label><div>{Number(emp.is_active) ? "1" : "0"}</div></div>
           <div className="span-2"><label>Description</label><div>{safe(emp.description)}</div></div>
