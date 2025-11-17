@@ -55,7 +55,6 @@ import OrderLookup from "./pages/customer/OrderLookup.jsx";
 import GiftShop from "./pages/customer/GiftShop.jsx";
 import Food from "./pages/customer/Food.jsx";
 
-
 // Employee/Admin
 import Dashboard from "./pages/employee/Dashboard.jsx";
 import Animals from "./pages/employee/Animals.jsx";
@@ -103,30 +102,25 @@ const ANY_EMP = [
 /* ---------- RoleHub (redirect to role dashboard) ---------- */
 function RoleHub() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && user) {
-      const map = {
-        keeper: "/keeper",
-        vet: "/vet",
-        gate_agent: "/gate",
-        ops_manager: "/ops",
-        retail: "/retail",
-        coordinator: "/coord",
-        security: "/security",
-        admin: "/admin",
-      };
-      const dest = map[user.role] || "/dashboard";
-      navigate(dest, { replace: true });
-    }
-  }, [loading, user, navigate]);
+  if (loading) return <div>Loading…</div>;
+  if (!user) return <Navigate to="/staff/login" replace />;
 
-  // Show null or a spinner while loading
-  if (loading || !user) return <div>Loading…</div>;
+  const map = {
+    keeper: "/keeper",
+    vet: "/vet",
+    gate_agent: "/gate",
+    ops_manager: "/ops",
+    retail: "/retail",
+    coordinator: "/coord",
+    security: "/security",
+    admin: "/admin",
+  };
 
-  return null; // Nothing else to render
+  const dest = map[user.role] || "/dashboard";
+  return <Navigate to={dest} replace />;
 }
+
 /* helper wrappers to block login pages when already authenticated */
 function RedirectIfAuthed({ children }) {
   const { user, loading } = useAuth();
@@ -665,7 +659,7 @@ function Nav() {
   );
 
   // PUBLIC/CUSTOMER NAV LINKS
-   const PublicLinks = ({ onClick }) => (
+  const PublicLinks = ({ onClick }) => (
     <>
       <li>
         <NavLink
@@ -892,7 +886,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Nav />
-      
+
       <Routes>
         {/* ---------- PUBLIC (customer) ---------- */}
         <Route path="/" element={<Home />} />
@@ -953,8 +947,14 @@ export default function App() {
         <Route path="/account" element={<MyAccount />} />
         <Route path="/account/orders/:id" element={<AccountOrderDetail />} />
         <Route path="/account/pos/:id" element={<AccountPosReceipt />} />
-        <Route path="/account/memberships/:id" element={<AccountMembershipDetail />} />
-        <Route path="/account/donations/:id" element={<AccountDonationDetail />} />
+        <Route
+          path="/account/memberships/:id"
+          element={<AccountMembershipDetail />}
+        />
+        <Route
+          path="/account/donations/:id"
+          element={<AccountDonationDetail />}
+        />
         <Route
           path="/staff/login"
           element={
@@ -1039,7 +1039,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* <Route path="/employees/:role" element={<ProtectedRolePage />} /> */}
 
         {/* Admin hub */}
@@ -1082,37 +1082,37 @@ export default function App() {
 
         {/* Animals (employee) */}
         <Route
-        path="/staff/animals"
-        element={
-          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-            <Animals />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/animals/new"
-        element={
-          <ProtectedRoute roles={["admin", "ops_manager"]}>
-            <AnimalEdit />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/animals/:id"
-        element={
-          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-            <AnimalView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/animals/:id/edit"
-        element={
-          <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
-            <AnimalEdit />
-          </ProtectedRoute>
-        }
-      />
+          path="/staff/animals"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <Animals />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/animals/new"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager"]}>
+              <AnimalEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/animals/:id"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <AnimalView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/animals/:id/edit"
+          element={
+            <ProtectedRoute roles={["admin", "ops_manager", "keeper", "vet"]}>
+              <AnimalEdit />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Feedings (keeper) */}
         <Route
@@ -1139,23 +1139,26 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Vet-facing animal directory & cards */}
         <Route
-        path="/animals/directory"
-        element={
-          <ProtectedRoute roles={["admin", "vet", "keeper"]}>
-            <AnimalDirectory />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/animals/:id"
-        element={
-          <ProtectedRoute roles={["admin", "vet", "keeper"]}>
-            <AnimalDetail />
-          </ProtectedRoute>
-        }
-      />
-        {/* VetVisit (vet)*/}
+          path="/animals/directory"
+          element={
+            <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+              <AnimalDirectory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/animals/:id"
+          element={
+            <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+              <AnimalDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Vet visits */}
         <Route
           path="/vetvisit"
           element={
@@ -1172,7 +1175,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/vetvisit/new" element={<VisitNew />} />
+        <Route
+          path="/vetvisit/new"
+          element={
+            <ProtectedRoute roles={["admin", "vet"]}>
+              <VisitNew />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/vetvisit/:id/edit"
           element={
@@ -1181,6 +1191,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         {/* Reports */}
         <Route
           path="/reports"
