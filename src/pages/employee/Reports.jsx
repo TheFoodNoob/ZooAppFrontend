@@ -257,6 +257,7 @@ export default function Reports() {
           ? raw.results
           : [];
         setVisitsData(list);
+        console.log("Loaded vet visits:", list);
       } catch (err) {
         console.error(err);
         setVisitsError("Failed to load vet visits.");
@@ -612,12 +613,13 @@ export default function Reports() {
     if (term) {
       list = list.filter((v) => {
         const fields = [
-          v.animal_name,
-          v.species,
+          v.name,
+          v.species_name,
           v.reason,
           v.diagnosis,
-          v.visit_id,
+          v.id,
           v.animal_id,
+          v.vet_user_id,
         ];
         return fields
           .filter(Boolean)
@@ -2105,15 +2107,15 @@ export default function Reports() {
                       <tbody>
                         {filteredVisits.map((v) => (
                           <tr key={v.visit_id}>
-                            {visitsCols.visit_id && <td>{v.visit_id}</td>}
+                            {visitsCols.visit_id && <td>{v.id}</td>}
                             {visitsCols.visit_date && (
                               <td>{new Date(v.visit_date).toLocaleString()}</td>
                             )}
-                            {visitsCols.animal_name && <td>{v.animal_name}</td>}
-                            {visitsCols.species && <td>{v.species}</td>}
+                            {visitsCols.animal_name && <td>{v.name}</td>}
+                            {visitsCols.species && <td>{v.species_name}</td>}
                             {visitsCols.reason && <td>{v.reason}</td>}
                             {visitsCols.diagnosis && <td>{v.diagnosis}</td>}
-                            {visitsCols.vet_id && <td>{v.vet_id}</td>}
+                            {visitsCols.vet_id && <td>{v.vet_user_id}</td>}
                           </tr>
                         ))}
                       </tbody>
