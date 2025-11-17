@@ -181,7 +181,7 @@ export default function AnimalDirectory() {
                       <td>{a.animal_id}</td>
                       <td>{a.animal_name || a.name}</td>
                       <td>
-                        {a.species_name ||
+                        {a.species ||
                           a.common_name ||
                           a.scientific_name ||
                           "—"}
