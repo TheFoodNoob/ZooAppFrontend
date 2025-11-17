@@ -13,11 +13,20 @@ export default function Orders() {
   const [msg, setMsg] = React.useState("");
 
   async function load() {
+    if (!token) {                // ⬅️ NEW: don't call API if not logged in yet
+      setMsg("Not logged in");
+      return;
+    }
+
     setLoading(true);
     setMsg("");
     try {
-      const url = q ? `${api}/api/orders?q=${encodeURIComponent(q)}` : `${api}/api/orders`;
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const url = q
+        ? `${api}/api/orders?q=${encodeURIComponent(q)}`
+        : `${api}/api/orders`;
+      const r = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!r.ok) throw new Error(`Failed (${r.status})`);
       setRows(await r.json());
     } catch (e) {
@@ -27,7 +36,10 @@ export default function Orders() {
     }
   }
 
-  React.useEffect(() => { load(); /* initial */ }, []);
+  React.useEffect(() => {
+    if (!token) return;  // ⬅️ wait until token exists
+    load();
+  }, [token]);
 
   async function refund(id) {
     if (!window.confirm(`Refund order #${id}?`)) return;
@@ -79,23 +91,35 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((o) => (
+                {rows.map((o) => {
+                // ⬅️ NEW: support either refund_cents or refunded_cents
+                const refundAmount =
+                  o.refund_cents ?? o.refunded_cents ?? null;
+
+                return (
                   <tr key={o.order_id}>
                     <td>#{o.order_id}</td>
                     <td>{o.buyer_name}</td>
                     <td>{o.buyer_email}</td>
-                    <td>{new Date(o.visit_date).toLocaleDateString()}</td>
+                    <td>
+                      {o.visit_date
+                        ? new Date(o.visit_date).toLocaleDateString()
+                        : "—"}
+                    </td>
                     <td>{o.items}</td>
                     <td>{toUSD(o.total_cents)}</td>
                     <td>
                       {o.status}
-                      {o.status === "refunded" && o.refund_cents
-                        ? ` (${toUSD(o.refund_cents)})`
+                      {o.status === "refunded" && refundAmount
+                        ? ` (${toUSD(refundAmount)})`
                         : null}
                     </td>
                     <td>
                       {o.refund_eligible && o.status !== "refunded" ? (
-                        <button className="btn btn-sm" onClick={() => refund(o.order_id)}>
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => refund(o.order_id)}
+                        >
                           Refund
                         </button>
                       ) : (
@@ -103,7 +127,8 @@ export default function Orders() {
                       )}
                     </td>
                   </tr>
-                ))}
+                );
+              })}
                 {rows.length === 0 && !loading && (
                   <tr><td colSpan="8" style={{ textAlign: "center", padding: 16 }}>No orders.</td></tr>
                 )}

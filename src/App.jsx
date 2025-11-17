@@ -45,6 +45,7 @@ import AccountPosReceipt from "./pages/customer/AccountPosReceipt.jsx";
 import AccountOrderDetail from "./pages/customer/AccountOrderDetail.jsx";
 import AccountMembershipDetail from "./pages/customer/AccountMembershipDetail.jsx";
 import AccountDonationDetail from "./pages/customer/AccountDonationDetail.jsx";
+import AdminDashboard from "./pages/employee/AdminDashboard";
 
 /* Used for both customer email-verify and the public order OTP verify step */
 import VerifyFromToken from "./pages/customer/VerifyFromToken.jsx";
@@ -1045,15 +1046,13 @@ export default function App() {
 
         {/* Admin hub */}
         <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <CardPage title="Admin Dashboard">
-                Use Employees, Events, Reports in the nav.
-              </CardPage>
-            </ProtectedRoute>
-          }
-        />
+        path="/admin"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
 
         {/* Employees */}
         <Route
