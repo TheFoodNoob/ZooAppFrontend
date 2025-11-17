@@ -11,6 +11,10 @@ export default function VetVisitsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [roleError, setRoleError] = useState("");
+
+  // which visit (if any) is in "are you sure?" delete mode
+  const [deleteId, setDeleteId] = useState(null);
+
   const { token, user } = useAuth();
   const navigate = useNavigate();
 
@@ -47,31 +51,35 @@ export default function VetVisitsPage() {
         v.diagnosis?.toLowerCase().includes(s) ||
         String(v.animal_id).includes(s) ||
         String(v.vet_user_id).includes(s) ||
-        v.name?.toLowerCase().includes(s) ||
-        v.species_name?.toLowerCase().includes(s)
+        (v.name || "").toLowerCase().includes(s) ||
+        (v.species_name || "").toLowerCase().includes(s)
     );
   }, [vetVisits, search]);
 
-  // Handle Edit button click
   const handleEditClick = (id) => {
     if (user.role === "keeper") {
-      alert("Keepers are not allowed to edit vet visits.");
-      setRoleError("Keepers cannot edit vet visits.");
+      setRoleError("Keepers are not allowed to edit vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
     navigate(`/vetvisit/${id}/edit`);
   };
 
-  // Handle Delete
-  const handleDelete = async (id) => {
+  // Step 1: user clicks Delete → put that row into confirm mode
+  const handleAskDelete = (id) => {
     if (user.role === "keeper") {
-      alert("Keepers are not allowed to delete vet visits.");
-      setRoleError("Keepers cannot delete vet visits.");
+      setRoleError("Keepers are not allowed to delete vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
-    if (!window.confirm("Delete this vet visit?")) return;
+    setDeleteId(id);
+  };
+
+  // Step 2: user clicks Confirm in the row
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    const id = deleteId;
+
     try {
       const res = await fetchAuth(`${api}/api/vetvisit/${id}`, {
         method: "DELETE",
@@ -85,7 +93,14 @@ export default function VetVisitsPage() {
     } catch (err) {
       console.error(err);
       alert("Failed to delete visit.");
+    } finally {
+      setDeleteId(null);
     }
+  };
+
+  // Step 3: user clicks Cancel
+  const handleCancelDelete = () => {
+    setDeleteId(null);
   };
 
   return (
@@ -114,12 +129,7 @@ export default function VetVisitsPage() {
         placeholder="Search by animal, species, reason, diagnosis, animal ID, vet ID..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        style={{
-          marginBottom: "12px",
-          padding: "8px 10px",
-          width: "100%",
-          maxWidth: "500px",
-        }}
+        style={{ marginBottom: "12px", padding: "6px", width: "100%" }}
       />
 
       {loading && <p>Loading...</p>}
@@ -128,103 +138,111 @@ export default function VetVisitsPage() {
       {!loading && !error && (
         <>
           {filteredVisits.length > 0 ? (
-            <div
-              className="card card--wide"
-              style={{ padding: "12px 16px", overflowX: "auto" }}
-            >
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "0.9rem",
-                }}
-              >
+            <div className="table-wrapper">
+              <table className="table">
                 <thead>
                   <tr>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Visit ID
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Animal
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Species
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Visit Date
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Reason
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Diagnosis
-                    </th>
-                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
-                      Vet ID
-                    </th>
-                    <th style={{ textAlign: "center", padding: "6px 4px" }}>
-                      Actions
-                    </th>
+                    <th>Visit ID</th>
+                    <th>Animal</th>
+                    <th>Species</th>
+                    <th>Visit Date</th>
+                    <th>Reason</th>
+                    <th>Diagnosis</th>
+                    <th>Vet ID</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVisits.map((v) => (
-                    <tr
-                      key={v.id}
-                      style={{ borderTop: "1px solid #eee", height: "38px" }}
-                    >
-                      <td style={{ padding: "4px" }}>{v.id}</td>
-                      <td style={{ padding: "4px" }}>
-                        {v.name}{" "}
-                        <span style={{ color: "#777", fontSize: "0.8rem" }}>
-                          (ID {v.animal_id})
-                        </span>
-                      </td>
-                      <td style={{ padding: "4px" }}>{v.species_name}</td>
-                      <td style={{ padding: "4px" }}>
-                        {new Date(v.visit_date).toLocaleString()}
-                      </td>
-                      <td style={{ padding: "4px", maxWidth: "160px" }}>
-                        {v.reason}
-                      </td>
-                      <td style={{ padding: "4px", maxWidth: "180px" }}>
-                        {v.diagnosis}
-                      </td>
-                      <td style={{ padding: "4px" }}>{v.vet_user_id}</td>
-                      <td
-                        style={{
-                          padding: "4px",
-                          textAlign: "center",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <button
-                          className="btn btn-small"
-                          style={{ marginRight: "4px" }}
-                          onClick={() => navigate(`/vetvisit/${v.id}`)}
-                        >
-                          View
-                        </button>
-                        <button
-                          className="btn btn-small"
-                          style={{ marginRight: "4px" }}
-                          onClick={() => handleEditClick(v.id)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-small btn-primary"
+                  {filteredVisits.map((v) => {
+                    const isConfirming = deleteId === v.id;
+                    return (
+                      <tr key={v.id}>
+                        <td>{v.id}</td>
+                        <td>
+                          {v.name}{" "}
+                          <span className="text-muted">
+                            (ID {v.animal_id})
+                          </span>
+                        </td>
+                        <td>{v.species_name}</td>
+                        <td>{new Date(v.visit_date).toLocaleString()}</td>
+                        <td>{v.reason}</td>
+                        <td>{v.diagnosis}</td>
+                        <td>{v.vet_user_id}</td>
+                        <td
                           style={{
-                            background: "#ac2525ff",
-                            borderColor: "#cc5555",
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
                           }}
-                          onClick={() => handleDelete(v.id)}
                         >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          {!isConfirming ? (
+                            <>
+                              <button
+                                className="btn btn-small"
+                                onClick={() => navigate(`/vetvisit/${v.id}`)}
+                                style={{ marginRight: "6px" }}
+                              >
+                                View
+                              </button>
+                              <button
+                                className="btn btn-small"
+                                onClick={() => handleEditClick(v.id)}
+                                style={{ marginRight: "6px" }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-small"
+                                style={{
+                                  backgroundColor: "#ac2525ff",
+                                  borderColor: "#cc5555",
+                                  color: "white",
+                                }}
+                                onClick={() => handleAskDelete(v.id)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                style={{
+                                  fontSize: "0.85rem",
+                                  marginRight: "8px",
+                                  color: "#374151",
+                                }}
+                              >
+                                Delete this visit?
+                              </span>
+                              <button
+                                className="btn btn-small"
+                                onClick={handleConfirmDelete}
+                                style={{
+                                  backgroundColor: "#b91c1c", // red
+                                  borderColor: "#7f1d1d",
+                                  color: "white",
+                                  marginRight: "4px",
+                                }}
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                className="btn btn-small"
+                                onClick={handleCancelDelete}
+                                style={{
+                                  backgroundColor: "#e5e7eb", // light gray
+                                  borderColor: "#d1d5db",
+                                  color: "#374151",
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
