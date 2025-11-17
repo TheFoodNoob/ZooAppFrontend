@@ -1,4 +1,3 @@
-// src/pages/employee/VetVisitsPage.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
@@ -11,13 +10,9 @@ export default function VetVisitsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [roleError, setRoleError] = useState("");
-
-  // which visit (if any) is in "are you sure?" delete mode
-  const [deleteId, setDeleteId] = useState(null);
-
   const { token, user } = useAuth();
   const navigate = useNavigate();
-
+  const canEdit = ["admin", "vet"].includes(user?.role);
   // Fetch vet visits
   useEffect(() => {
     const fetchVetVisits = async () => {
@@ -50,36 +45,28 @@ export default function VetVisitsPage() {
         v.reason?.toLowerCase().includes(s) ||
         v.diagnosis?.toLowerCase().includes(s) ||
         String(v.animal_id).includes(s) ||
-        String(v.vet_user_id).includes(s) ||
-        (v.name || "").toLowerCase().includes(s) ||
-        (v.species_name || "").toLowerCase().includes(s)
+        String(v.vet_user_id).includes(s)
     );
   }, [vetVisits, search]);
 
+  // Handle Edit button click
   const handleEditClick = (id) => {
     if (user.role === "keeper") {
-      setRoleError("Keepers are not allowed to edit vet visits.");
+      alert("Keepers are not allowed to edit vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
     navigate(`/vetvisit/${id}/edit`);
   };
 
-  // Step 1: user clicks Delete → put that row into confirm mode
-  const handleAskDelete = (id) => {
-    if (user.role === "keeper") {
-      setRoleError("Keepers are not allowed to delete vet visits.");
+  // Handle Delete
+  const handleDelete = async (id) => {
+     if (user.role === "keeper") {
+      alert("Keepers are not allowed to delete vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
-    setDeleteId(id);
-  };
-
-  // Step 2: user clicks Confirm in the row
-  const handleConfirmDelete = async () => {
-    if (!deleteId) return;
-    const id = deleteId;
-
+    if (!window.confirm("Delete this vet visit?")) return;
     try {
       const res = await fetchAuth(`${api}/api/vetvisit/${id}`, {
         method: "DELETE",
@@ -93,18 +80,11 @@ export default function VetVisitsPage() {
     } catch (err) {
       console.error(err);
       alert("Failed to delete visit.");
-    } finally {
-      setDeleteId(null);
     }
   };
 
-  // Step 3: user clicks Cancel
-  const handleCancelDelete = () => {
-    setDeleteId(null);
-  };
-
   return (
-    <div className="container container-wide">
+      <div className="container container-wide">
       <div className="header-row">
         <h1>Vet Visits</h1>
         <div className="row-gap">
@@ -119,14 +99,13 @@ export default function VetVisitsPage() {
           )}
         </div>
       </div>
-
       {roleError && (
         <div style={{ color: "red", marginBottom: "12px" }}>{roleError}</div>
       )}
 
       <input
         type="text"
-        placeholder="Search by animal, species, reason, diagnosis, animal ID, vet ID..."
+        placeholder="Search by reason, diagnosis, animal ID, vet ID..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ marginBottom: "12px", padding: "6px", width: "100%" }}
@@ -138,114 +117,76 @@ export default function VetVisitsPage() {
       {!loading && !error && (
         <>
           {filteredVisits.length > 0 ? (
-            <div className="table-wrapper">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Visit ID</th>
-                    <th>Animal</th>
-                    <th>Species</th>
-                    <th>Visit Date</th>
-                    <th>Reason</th>
-                    <th>Diagnosis</th>
-                    <th>Vet ID</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredVisits.map((v) => {
-                    const isConfirming = deleteId === v.id;
-                    return (
-                      <tr key={v.id}>
-                        <td>{v.id}</td>
-                        <td>
-                          {v.name}{" "}
-                          <span className="text-muted">
-                            (ID {v.animal_id})
-                          </span>
-                        </td>
-                        <td>{v.species_name}</td>
-                        <td>{new Date(v.visit_date).toLocaleString()}</td>
-                        <td>{v.reason}</td>
-                        <td>{v.diagnosis}</td>
-                        <td>{v.vet_user_id}</td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {!isConfirming ? (
-                            <>
-                              <button
-                                className="btn btn-small"
-                                onClick={() => navigate(`/vetvisit/${v.id}`)}
-                                style={{ marginRight: "6px" }}
-                              >
-                                View
-                              </button>
-                              <button
-                                className="btn btn-small"
-                                onClick={() => handleEditClick(v.id)}
-                                style={{ marginRight: "6px" }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="btn btn-small"
-                                style={{
-                                  backgroundColor: "#ac2525ff",
-                                  borderColor: "#cc5555",
-                                  color: "white",
-                                }}
-                                onClick={() => handleAskDelete(v.id)}
-                              >
-                                Delete
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span
-                                style={{
-                                  fontSize: "0.85rem",
-                                  marginRight: "8px",
-                                  color: "#374151",
-                                }}
-                              >
-                                Delete this visit?
-                              </span>
-                              <button
-                                className="btn btn-small"
-                                onClick={handleConfirmDelete}
-                                style={{
-                                  backgroundColor: "#b91c1c", // red
-                                  borderColor: "#7f1d1d",
-                                  color: "white",
-                                  marginRight: "4px",
-                                }}
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                className="btn btn-small"
-                                onClick={handleCancelDelete}
-                                style={{
-                                  backgroundColor: "#e5e7eb", // light gray
-                                  borderColor: "#d1d5db",
-                                  color: "#374151",
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            filteredVisits.map((v) => (
+              <div key={v.id} className="card card--wide" style={{ marginBottom: "16px" }}>
+                <div className="two-col">
+                  <div>
+                    <label>Visit ID</label>
+                    <div>{v.id}</div>
+                  </div>
+                  <div>
+                    <label>Animal ID</label>
+                    <div>{v.animal_id}</div>
+                  </div>
+                  <div>
+                    <label>Animal Name</label>
+                    <div>{v.name}</div>
+                  </div>
+                  <div>
+                    <label>Species</label>
+                    <div>{v.species_name}</div>
+                  </div>
+                  <div>
+                    <label>Scientific Name</label>
+                    <div><i>{v.sf_name}</i></div>
+                  </div>
+                  <div>
+                    <label>Visit Date</label>
+                    <div>{new Date(v.visit_date).toLocaleDateString()}</div>
+                  </div>
+                  <div>
+                    <label>Reason</label>
+                    <div>{v.reason}</div>
+                  </div>
+                  <div>
+                    <label>Diagnosis</label>
+                    <div>{v.diagnosis}</div>
+                  </div>
+                  <div>
+                    <label>Vet User ID</label>
+                    <div>{v.vet_user_id}</div>
+                  </div>
+                </div>
+
+                {canEdit && (
+                  <div style={{ marginTop: "12px" }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => navigate(`/vetvisit/${v.id}`)}
+                      style={{ marginRight: "8px" }}
+                    >
+                    View
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={() => handleEditClick(v.id)}
+                    style={{ marginRight: "8px" }}
+                  >
+                    Edit
+                  </button>
+
+                   <button
+                      className="btn btn-primary"
+                      onClick={() => handleDelete(v.id)}
+                      style={{ background: "#ac2525ff", borderColor: "#cc5555" }}
+                    >
+                      Delete
+                    </button>
+                </div>
+                )}
+              </div>
+            ))
           ) : (
             <p>No vet visits found.</p>
           )}

@@ -83,11 +83,23 @@ export default function Dashboard() {
             )}
 
             {/* Animal / care tools (keeper + vet + admin/ops) */}
-            {["admin", "ops_manager", "keeper", "vet"].includes(role) && (
-              <>
+
+
+            {["admin", "ops_manager", "keeper"].includes(role) && (
+              <ul>
                 <li>
-                  <Link to="/staff/animals">Animal records</Link>
+                  <Link to="/staff/animals">Animal directory</Link>
                 </li>
+                <li>
+                  <Link to="/feedings">Feeding logs</Link>
+                </li>
+                <li>
+                  <Link to="/vetvisit">Vet visits</Link>
+                </li>
+              </ul>
+            )}
+            {["admin", "ops_manager", "vet"].includes(role) && (
+              <ul>
                 <li>
                   <Link to="/animals/directory">Animal directory</Link>
                 </li>
@@ -97,7 +109,7 @@ export default function Dashboard() {
                 <li>
                   <Link to="/vetvisit">Vet visits</Link>
                 </li>
-              </>
+              </ul>
             )}
 
             {/* Gate / ticket tools */}

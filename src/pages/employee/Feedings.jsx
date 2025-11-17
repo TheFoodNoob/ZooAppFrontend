@@ -28,7 +28,7 @@ export default function Feedings() {
     return () => clearTimeout(t);
   }, [toast.open]);
 
-  const canEdit = ["admin", "vet", "keeper"].includes(user?.role);
+  const canEdit = ["admin", "keeper"].includes(user?.role);
 
   useEffect(() => {
     loadFeedings();
@@ -135,6 +135,10 @@ export default function Feedings() {
   };
 
   const deleteFeeding = async (id) => {
+    if (user.role === "vet") {
+      alert("Vets are not allowed to delete feeding records.");
+      return;
+    }
     if (!window.confirm("Delete this feeding record? This cannot be undone."))
       return;
     try {
@@ -256,9 +260,14 @@ export default function Feedings() {
                     </button>
                     <button
                       className="btn btn-sm"
-                      onClick={() =>
-                        nav(`/feedings/${f.feeding_id}/edit`)
+                      onClick={() => {
+                      if (!canEdit) {
+                        alert("You do not have permission to edit feeding records.");
+                        return;
                       }
+                      nav(`/feedings/edit/${f.feeding_id}`);
+                    }}
+
                       style={{ margin: "0 5px" }}
                     >
                       Edit
