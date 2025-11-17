@@ -77,6 +77,8 @@ import Retail from "./pages/employee/Retail.jsx";
 import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 import RolePage from "./pages/employee/EmployeeByRole.jsx";
+import AnimalDirectory from "./pages/employee/AnimalDirectory";
+import AnimalDetail from "./pages/employee/AnimalDetail";
 import VetVisitsPage from "./pages/employee/VetVisit.jsx";
 import VisitNew from "./pages/employee/VisitNew";
 import VetVisitEdit from "./pages/employee/VisitEdit.jsx";
@@ -1137,6 +1139,22 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+        path="/animals/directory"
+        element={
+          <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+            <AnimalDirectory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/animals/:id"
+        element={
+          <ProtectedRoute roles={["admin", "vet", "keeper"]}>
+            <AnimalDetail />
+          </ProtectedRoute>
+        }
+      />
         {/* VetVisit (vet)*/}
         <Route
           path="/vetvisit"

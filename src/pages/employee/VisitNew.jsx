@@ -1,12 +1,16 @@
 // src/pages/employee/VetVisitNew.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 
 export default function VetVisitNew() {
   const navigate = useNavigate();
   const { token, user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // get ?animal_id= from query string, if present
+  const initialAnimalId = searchParams.get("animal_id") || "";
 
   // ---- animals for dropdown + table ----
   const [animals, setAnimals] = useState([]);
@@ -16,7 +20,7 @@ export default function VetVisitNew() {
 
   // ---- form state ----
   const [form, setForm] = useState({
-    animal_id: "",
+    animal_id: initialAnimalId,
     // prefer employee_id if your JWT exposes it; fall back to id
     vet_user_id: user?.employee_id || user?.id || "",
     visit_date: new Date().toISOString().slice(0, 16),

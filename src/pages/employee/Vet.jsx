@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Vet() {
   const { token } = useAuth();
+  const navigate = useNavigate();
+  
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [pastVisits, setPastVisits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +82,13 @@ export default function Vet() {
     <div className="page" style={{ padding: "24px 16px" }}>
       <div className="container" style={{ maxWidth: 1120, margin: "0 auto" }}>
         <h2 style={{ margin: "0 0 12px 0" }}>Vet Dashboard</h2>
-
+        <button
+          className="btn btn-small"
+          type="button"
+          onClick={() => navigate("/animals/directory")}
+        >
+          Open Animal Directory
+        </button>
         <div
           className="card"
           style={{
