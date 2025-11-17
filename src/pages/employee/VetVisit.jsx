@@ -1,3 +1,4 @@
+// src/pages/employee/VetVisitsPage.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
@@ -45,7 +46,9 @@ export default function VetVisitsPage() {
         v.reason?.toLowerCase().includes(s) ||
         v.diagnosis?.toLowerCase().includes(s) ||
         String(v.animal_id).includes(s) ||
-        String(v.vet_user_id).includes(s)
+        String(v.vet_user_id).includes(s) ||
+        v.name?.toLowerCase().includes(s) ||
+        v.species_name?.toLowerCase().includes(s)
     );
   }, [vetVisits, search]);
 
@@ -53,6 +56,7 @@ export default function VetVisitsPage() {
   const handleEditClick = (id) => {
     if (user.role === "keeper") {
       alert("Keepers are not allowed to edit vet visits.");
+      setRoleError("Keepers cannot edit vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
@@ -61,8 +65,9 @@ export default function VetVisitsPage() {
 
   // Handle Delete
   const handleDelete = async (id) => {
-     if (user.role === "keeper") {
+    if (user.role === "keeper") {
       alert("Keepers are not allowed to delete vet visits.");
+      setRoleError("Keepers cannot delete vet visits.");
       setTimeout(() => setRoleError(""), 4000);
       return;
     }
@@ -84,8 +89,21 @@ export default function VetVisitsPage() {
   };
 
   return (
-    <div>
-      <h1>Vet Visits</h1>
+    <div className="container container-wide">
+      <div className="header-row">
+        <h1>Vet Visits</h1>
+        <div className="row-gap">
+          {(user.role === "admin" || user.role === "vet") && (
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/vetvisit/new")}
+            >
+              + New Visit
+            </button>
+          )}
+        </div>
+      </div>
 
       {roleError && (
         <div style={{ color: "red", marginBottom: "12px" }}>{roleError}</div>
@@ -93,10 +111,15 @@ export default function VetVisitsPage() {
 
       <input
         type="text"
-        placeholder="Search by reason, diagnosis, animal ID, vet ID..."
+        placeholder="Search by animal, species, reason, diagnosis, animal ID, vet ID..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: "12px", padding: "6px", width: "100%" }}
+        style={{
+          marginBottom: "12px",
+          padding: "8px 10px",
+          width: "100%",
+          maxWidth: "500px",
+        }}
       />
 
       {loading && <p>Loading...</p>}
@@ -105,74 +128,106 @@ export default function VetVisitsPage() {
       {!loading && !error && (
         <>
           {filteredVisits.length > 0 ? (
-            filteredVisits.map((v) => (
-              <div key={v.id} className="card card--wide" style={{ marginBottom: "16px" }}>
-                <div className="two-col">
-                  <div>
-                    <label>Visit ID</label>
-                    <div>{v.id}</div>
-                  </div>
-                  <div>
-                    <label>Animal ID</label>
-                    <div>{v.animal_id}</div>
-                  </div>
-                  <div>
-                    <label>Animal Name</label>
-                    <div>{v.name}</div>
-                  </div>
-                  <div>
-                    <label>Species</label>
-                    <div>{v.species_name}</div>
-                  </div>
-                  <div>
-                    <label>Scientific Name</label>
-                    <div><i>{v.sf_name}</i></div>
-                  </div>
-                  <div>
-                    <label>Visit Date</label>
-                    <div>{new Date(v.visit_date).toLocaleDateString()}</div>
-                  </div>
-                  <div>
-                    <label>Reason</label>
-                    <div>{v.reason}</div>
-                  </div>
-                  <div>
-                    <label>Diagnosis</label>
-                    <div>{v.diagnosis}</div>
-                  </div>
-                  <div>
-                    <label>Vet User ID</label>
-                    <div>{v.vet_user_id}</div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: "12px" }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => navigate(`/vetvisit/${v.id}`)}
-                    style={{ marginRight: "8px" }}
-                  >
-                    View
-                  </button>
-
-                  <button
-                    className="btn"
-                    onClick={() => handleEditClick(v.id)}
-                    style={{ marginRight: "8px" }}
-                  >
-                    Edit
-                  </button>
-
-                   <button
-                      className="btn btn-primary"
-                      onClick={() => handleDelete(v.id)}
-                      style={{ background: "#ac2525ff", borderColor: "#cc5555" }}
+            <div
+              className="card card--wide"
+              style={{ padding: "12px 16px", overflowX: "auto" }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.9rem",
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Visit ID
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Animal
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Species
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Visit Date
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Reason
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Diagnosis
+                    </th>
+                    <th style={{ textAlign: "left", padding: "6px 4px" }}>
+                      Vet ID
+                    </th>
+                    <th style={{ textAlign: "center", padding: "6px 4px" }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredVisits.map((v) => (
+                    <tr
+                      key={v.id}
+                      style={{ borderTop: "1px solid #eee", height: "38px" }}
                     >
-                      Delete
-                    </button>
-                </div>
-              </div>
-            ))
+                      <td style={{ padding: "4px" }}>{v.id}</td>
+                      <td style={{ padding: "4px" }}>
+                        {v.name}{" "}
+                        <span style={{ color: "#777", fontSize: "0.8rem" }}>
+                          (ID {v.animal_id})
+                        </span>
+                      </td>
+                      <td style={{ padding: "4px" }}>{v.species_name}</td>
+                      <td style={{ padding: "4px" }}>
+                        {new Date(v.visit_date).toLocaleString()}
+                      </td>
+                      <td style={{ padding: "4px", maxWidth: "160px" }}>
+                        {v.reason}
+                      </td>
+                      <td style={{ padding: "4px", maxWidth: "180px" }}>
+                        {v.diagnosis}
+                      </td>
+                      <td style={{ padding: "4px" }}>{v.vet_user_id}</td>
+                      <td
+                        style={{
+                          padding: "4px",
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <button
+                          className="btn btn-small"
+                          style={{ marginRight: "4px" }}
+                          onClick={() => navigate(`/vetvisit/${v.id}`)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="btn btn-small"
+                          style={{ marginRight: "4px" }}
+                          onClick={() => handleEditClick(v.id)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-small btn-primary"
+                          style={{
+                            background: "#ac2525ff",
+                            borderColor: "#cc5555",
+                          }}
+                          onClick={() => handleDelete(v.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p>No vet visits found.</p>
           )}

@@ -78,6 +78,7 @@ import Coordinator from "./pages/employee/Coordinator.jsx";
 import Security from "./pages/employee/Security.jsx";
 import RolePage from "./pages/employee/EmployeeByRole.jsx";
 import VetVisitsPage from "./pages/employee/VetVisit.jsx";
+import VisitNew from "./pages/employee/VisitNew";
 import VetVisitEdit from "./pages/employee/VisitEdit.jsx";
 import TicketStats from "./pages/employee/Tickets.jsx";
 import AnimalView from "./pages/employee/AnimalView.jsx";
@@ -1153,6 +1154,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/vetvisit/new" element={<VisitNew />} />
         <Route
           path="/vetvisit/:id/edit"
           element={
