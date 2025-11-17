@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
-import fetchAuth from "../../utils/fetchAuth";
 import { useAuth } from "../../context/AuthContext";
 
 export default function VetVisitNew() {
@@ -18,7 +17,8 @@ export default function VetVisitNew() {
   // ---- form state ----
   const [form, setForm] = useState({
     animal_id: "",
-    vet_user_id: user?.id || "",            // or user?.employee_id if that's what you store
+    // prefer employee_id if your JWT exposes it; fall back to id
+    vet_user_id: user?.employee_id || user?.id || "",
     visit_date: new Date().toISOString().slice(0, 16),
     reason: "",
     diagnosis: "",
@@ -27,17 +27,27 @@ export default function VetVisitNew() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Load animals once (reuse the same /api/animals endpoint you use on the Animals page)
+  // Load animals once – use plain fetch so we control headers 100%
   useEffect(() => {
     const loadAnimals = async () => {
+      if (!token) return; // not logged in yet
+
       setAnimalsLoading(true);
       setAnimalsError("");
+
       try {
-        const res = await fetchAuth(`${api}/api/animals`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(`${api}/api/animals`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        if (!res.ok) throw new Error("Failed to fetch animals");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          console.error("animals error:", data);
+          throw new Error(data.error || "Failed to fetch animals");
+        }
+
         const data = await res.json();
         setAnimals(data);
       } catch (err) {
@@ -61,16 +71,13 @@ export default function VetVisitNew() {
       const name = (a.animal_name || a.name || "").toLowerCase();
       const species =
         (a.species_name || a.common_name || a.scientific_name || "").toLowerCase();
-      return (
-        idStr.includes(s) ||
-        name.includes(s) ||
-        species.includes(s)
-      );
+      return idStr.includes(s) || name.includes(s) || species.includes(s);
     });
   }, [animals, animalSearch]);
 
   const handleChange = (e) => {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const handleSelectAnimal = (animalId) => {
@@ -89,6 +96,10 @@ export default function VetVisitNew() {
       setError("Reason is required.");
       return;
     }
+    if (!form.vet_user_id) {
+      setError("Vet User ID is required.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -100,7 +111,7 @@ export default function VetVisitNew() {
         diagnosis: form.diagnosis.trim() || null,
       };
 
-      const res = await fetchAuth(`${api}/api/vetvisit`, {
+      const res = await fetch(`${api}/api/vetvisit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -109,7 +120,12 @@ export default function VetVisitNew() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Create failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("create visit error:", data);
+        throw new Error(data.error || "Create failed");
+      }
+
       const data = await res.json();
       navigate(`/vetvisit/${data.vet_visit_id}`);
     } catch (err) {
@@ -120,14 +136,29 @@ export default function VetVisitNew() {
     }
   };
 
+  const selectedAnimalText = (() => {
+    if (!form.animal_id) {
+      return "No animal selected yet. Use the search / dropdown / table below.";
+    }
+    const a = animals.find(
+      (x) => String(x.animal_id) === String(form.animal_id)
+    );
+    if (!a) return `Selected Animal ID: ${form.animal_id}`;
+    return `Selected: ${a.animal_name || a.name} (ID ${a.animal_id}) – ${
+      a.species_name || a.common_name || a.scientific_name || "Unknown species"
+    }`;
+  })();
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">New Vet Visit</h1>
 
       {/* MAIN FORM */}
       <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+        <div className="mb-2 text-sm text-gray-600">{selectedAnimalText}</div>
+
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Animal ID is controlled by picker */}
+          {/* Animal ID is controlled mostly by picker, but still editable */}
           <div>
             <label className="block font-semibold mb-1">Selected Animal ID</label>
             <input
@@ -136,7 +167,7 @@ export default function VetVisitNew() {
               value={form.animal_id}
               onChange={handleChange}
               className="border p-2 w-full"
-              placeholder="Pick from the picker below"
+              placeholder="Pick from the finder below"
               required
             />
           </div>
@@ -231,12 +262,16 @@ export default function VetVisitNew() {
               onChange={(e) => handleSelectAnimal(e.target.value)}
             >
               <option value="">— Select animal —</option>
-              {filteredAnimals.slice(0, 25).map((a) => (
-                <option key={a.animal_id} value={a.animal_id}>
-                  {(a.animal_name || a.name) ?? "Unknown"} (ID {a.animal_id}) –{" "}
-                  {a.species_name || a.common_name || a.scientific_name}
-                </option>
-              ))}
+              {filteredAnimals
+                .slice() // copy so we can sort without mutating
+                .sort((a, b) => a.animal_id - b.animal_id)
+                .slice(0, 25)
+                .map((a) => (
+                  <option key={a.animal_id} value={a.animal_id}>
+                    {(a.animal_name || a.name) ?? "Unknown"} (ID {a.animal_id}) –{" "}
+                    {a.species_name || a.common_name || a.scientific_name}
+                  </option>
+                ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
               Showing first 25 matches. Use the table below for more details.
@@ -261,30 +296,34 @@ export default function VetVisitNew() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAnimals.slice(0, 50).map((a) => {
-                  const isSelected =
-                    String(form.animal_id) === String(a.animal_id);
-                  return (
-                    <tr
-                      key={a.animal_id}
-                      className={isSelected ? "row-selected" : ""}
-                    >
-                      <td>{a.animal_id}</td>
-                      <td>{a.animal_name || a.name}</td>
-                      <td>{a.species_name || a.common_name}</td>
-                      <td>{a.exhibit_name || a.exhibit || "-"}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          onClick={() => handleSelectAnimal(a.animal_id)}
-                        >
-                          Use
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredAnimals
+                  .slice()
+                  .sort((a, b) => a.animal_id - b.animal_id)
+                  .slice(0, 50)
+                  .map((a) => {
+                    const isSelected =
+                      String(form.animal_id) === String(a.animal_id);
+                    return (
+                      <tr
+                        key={a.animal_id}
+                        className={isSelected ? "row-selected" : ""}
+                      >
+                        <td>{a.animal_id}</td>
+                        <td>{a.animal_name || a.name}</td>
+                        <td>{a.species_name || a.common_name}</td>
+                        <td>{a.exhibit_name || a.exhibit || "-"}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-small"
+                            onClick={() => handleSelectAnimal(a.animal_id)}
+                          >
+                            Use
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 {filteredAnimals.length === 0 && (
                   <tr>
                     <td colSpan={5}>No animals match that search.</td>
