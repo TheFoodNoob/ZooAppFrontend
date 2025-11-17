@@ -53,7 +53,7 @@ const PLAN_PRICES = {
 const INITIAL_ROWS = 5;
 
 export default function MyAccount() {
-  const { user, customerToken } = useAuth();
+  const { user, customerToken, setUser } = useAuth();
   const location = useLocation();
 
   const [loading, setLoading] = React.useState(true);
@@ -87,6 +87,17 @@ export default function MyAccount() {
   const [cancelError, setCancelError] = React.useState("");
   const [showCancelConfirm, setShowCancelConfirm] = React.useState(false);
 
+    // update information form
+  const [editing, setEditing] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [editError, setEditError] = React.useState("");
+  const [editSuccess, setEditSuccess] = React.useState("");
+  const [form, setForm] = React.useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+  });
+
   // --------------------------------------------------
   // Shared loader so we can call it after cancellation
   // --------------------------------------------------
@@ -97,6 +108,9 @@ export default function MyAccount() {
         [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
         user?.email,
       email: user?.email,
+      first_name: user?.first_name || "",
+      last_name: user?.last_name || "",
+      phone: user?.phone || "",
       membership_tier: user?.membership_tier || null,
       membership_status: user?.membership_tier ? "active" : "none",
       member_since: user?.member_since || null,
@@ -152,7 +166,16 @@ export default function MyAccount() {
         savingsData = await savingsRes.value.json().catch(() => null);
       }
 
-      setAccount(acctData || baseAccount);
+      const acc = acctData || baseAccount;
+      setAccount(acc);
+
+      // prime edit form from account data
+      setForm({
+        first_name: acc.first_name || "",
+        last_name: acc.last_name || "",
+        phone: acc.phone || "",
+      });
+
       setOrders(Array.isArray(orderData) ? orderData : []);
       setPosPurchases(historyData?.pos || []);
       setMembershipHistory(historyData?.memberships || []);
@@ -283,6 +306,103 @@ export default function MyAccount() {
     setCancelLoading(false);
   }
 }
+ // -------- Update information handlers --------
+  function startEditing() {
+    if (!account) return;
+    setEditError("");
+    setEditSuccess("");
+    setForm({
+      first_name: account.first_name || "",
+      last_name: account.last_name || "",
+      phone: account.phone || "",
+    });
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setEditError("");
+    setEditSuccess("");
+    if (account) {
+      setForm({
+        first_name: account.first_name || "",
+        last_name: account.last_name || "",
+        phone: account.phone || "",
+      });
+    }
+  }
+
+  function handleEditChange(e) {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  }
+
+  async function handleSaveChanges() {
+    if (!customerToken || !account) return;
+
+    const fn = form.first_name.trim();
+    const ln = form.last_name.trim();
+
+    if (!fn || !ln) {
+      setEditError("First and last name are required.");
+      return;
+    }
+
+    setSaving(true);
+    setEditError("");
+    setEditSuccess("");
+
+    try {
+      const res = await fetch(`${api}/api/customer/account`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${customerToken}`,
+        },
+        body: JSON.stringify({
+          first_name: fn,
+          last_name: ln,
+          phone: form.phone.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Failed to update account.");
+      }
+
+      const updated = data.customer || {};
+
+      // update account state (keep email & membership fields)
+      setAccount((prev) => ({
+        ...prev,
+        ...updated,
+        name:
+          `${updated.first_name || ""} ${
+            updated.last_name || ""
+          }`.trim() || prev?.name,
+      }));
+
+      // also patch AuthContext user if possible
+      if (setUser && user) {
+        setUser((prev) => ({
+          ...prev,
+          first_name: updated.first_name ?? prev.first_name,
+          last_name: updated.last_name ?? prev.last_name,
+          phone: updated.phone ?? prev.phone,
+          email: prev.email, // keep same email
+        }));
+      }
+
+      setEditSuccess("Your information has been updated.");
+      setEditing(false);
+    } catch (e) {
+      console.error("update account error:", e);
+      setEditError(e.message || "Failed to update account.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -301,9 +421,29 @@ export default function MyAccount() {
 
         {!loading && (
           <>
-            {/* Account summary */}
+                        {/* Account summary */}
             <div className="card" style={{ marginTop: 20 }}>
-              <h2>Account overview</h2>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <h2 style={{ margin: 0 }}>Account overview</h2>
+
+                {!editing && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={startEditing}
+                  >
+                    Update information
+                  </button>
+                )}
+              </div>
+
               <div
                 style={{
                   display: "grid",
@@ -313,14 +453,67 @@ export default function MyAccount() {
                   marginTop: 12,
                 }}
               >
+                {/* Name (editable) */}
                 <div>
                   <div className="label">Name</div>
-                  <div>{account?.name || "—"}</div>
+                  {editing ? (
+                    <div
+                      className="two-col"
+                      style={{ gap: 8, alignItems: "flex-start" }}
+                    >
+                      <input
+                        name="first_name"
+                        placeholder="First name"
+                        value={form.first_name}
+                        onChange={handleEditChange}
+                      />
+                      <input
+                        name="last_name"
+                        placeholder="Last name"
+                        value={form.last_name}
+                        onChange={handleEditChange}
+                      />
+                    </div>
+                  ) : (
+                    <div>{account?.name || "—"}</div>
+                  )}
                 </div>
+
+                {/* Email (always read-only) */}
                 <div>
                   <div className="label">Email</div>
-                  <div>{account?.email || "—"}</div>
+                  <input
+                    value={account?.email || "—"}
+                    readOnly
+                  />
+                  <p
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12,
+                      color: "var(--muted)",
+                    }}
+                  >
+                    Email is tied to your customer account and can't be changed
+                    here. Contact support if you need to update it.
+                  </p>
                 </div>
+
+                {/* Phone */}
+                <div>
+                  <div className="label">Phone (optional)</div>
+                  {editing ? (
+                    <input
+                      name="phone"
+                      placeholder="(555) 555-5555"
+                      value={form.phone}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    <div>{account?.phone || "—"}</div>
+                  )}
+                </div>
+
+                {/* Membership info (unchanged) */}
                 <div>
                   <div className="label">Membership</div>
                   <div>
@@ -329,6 +522,7 @@ export default function MyAccount() {
                       : "No membership"}
                   </div>
                 </div>
+
                 {isMember && account?.member_since && (
                   <div>
                     <div className="label">Member since</div>
@@ -337,6 +531,45 @@ export default function MyAccount() {
                 )}
               </div>
 
+              {/* edit error/success + buttons */}
+              {editing && (
+                <div style={{ marginTop: 10 }}>
+                  {editError && (
+                    <div className="error" style={{ marginBottom: 8 }}>
+                      {editError}
+                    </div>
+                  )}
+                  {editSuccess && (
+                    <div
+                      className="note"
+                      style={{ marginBottom: 8, color: "#1b5e20" }}
+                    >
+                      {editSuccess}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={cancelEditing}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleSaveChanges}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving…" : "Save changes"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
               {!isMember && (
                 <p
                   style={{
