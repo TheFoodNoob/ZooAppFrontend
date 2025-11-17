@@ -3,7 +3,10 @@ import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 
 const toUSD = (c) =>
-  (Number(c || 0) / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
+  (Number(c || 0) / 100).toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+  });
 
 export default function Orders() {
   const { token } = useAuth();
@@ -11,50 +14,59 @@ export default function Orders() {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState("");
+  const [confirmId, setConfirmId] = React.useState(null); // <-- NEW (stores ID waiting for confirm)
 
   async function load() {
-    if (!token) {                // ⬅️ NEW: don't call API if not logged in yet
+    if (!token) {
       setMsg("Not logged in");
       return;
     }
 
     setLoading(true);
     setMsg("");
+
     try {
       const url = q
         ? `${api}/api/orders?q=${encodeURIComponent(q)}`
         : `${api}/api/orders`;
+
       const r = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!r.ok) throw new Error(`Failed (${r.status})`);
+
+      if (!r.ok) throw new Error(`Failed to load orders (${r.status})`);
+
       setRows(await r.json());
-    } catch (e) {
-      setMsg(e.message || "Failed");
+    } catch (err) {
+      setMsg(err.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }
   }
 
   React.useEffect(() => {
-    if (!token) return;  // ⬅️ wait until token exists
-    load();
+    if (token) load();
   }, [token]);
 
-  async function refund(id) {
-    if (!window.confirm(`Refund order #${id}?`)) return;
+  async function doRefund(id) {
     try {
       const r = await fetch(`${api}/api/orders/${id}/refund`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ reason: "staff refund" }),
       });
+
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Refund failed");
+
+      setConfirmId(null);
       await load();
-      alert("Refunded.");
-    } catch (e) {
-      alert(e.message || "Refund failed");
+      setMsg(`Order #${id} refunded successfully.`);
+    } catch (err) {
+      setMsg(err.message || "Refund failed");
     }
   }
 
@@ -62,11 +74,15 @@ export default function Orders() {
     <div className="page card-page">
       <div className="card-page-inner">
         <h2 className="card-page-title">Orders</h2>
+
         <div className="card card-page-body">
+          {/* SEARCH BAR */}
           <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
             <input
               placeholder="Search order id or email…"
-              value={q} onChange={(e) => setQ(e.target.value)}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && load()}
               style={{ flex: "1 1 260px" }}
             />
             <button className="btn" onClick={load} disabled={loading}>
@@ -74,8 +90,11 @@ export default function Orders() {
             </button>
           </div>
 
-          {msg && <div className="error" style={{ marginBottom: 10 }}>{msg}</div>}
+          {msg && (
+            <div style={{ color: "#b33", marginBottom: 10 }}>{msg}</div>
+          )}
 
+          {/* TABLE */}
           <div style={{ overflowX: "auto" }}>
             <table className="table" style={{ width: "100%", background: "#fff" }}>
               <thead>
@@ -92,45 +111,73 @@ export default function Orders() {
               </thead>
               <tbody>
                 {rows.map((o) => {
-                // ⬅️ NEW: support either refund_cents or refunded_cents
-                const refundAmount =
-                  o.refund_cents ?? o.refunded_cents ?? null;
+                  const refundAmount =
+                    o.refund_cents ?? o.refunded_cents ?? null;
 
-                return (
-                  <tr key={o.order_id}>
-                    <td>#{o.order_id}</td>
-                    <td>{o.buyer_name}</td>
-                    <td>{o.buyer_email}</td>
-                    <td>
-                      {o.visit_date
-                        ? new Date(o.visit_date).toLocaleDateString()
-                        : "—"}
-                    </td>
-                    <td>{o.items}</td>
-                    <td>{toUSD(o.total_cents)}</td>
-                    <td>
-                      {o.status}
-                      {o.status === "refunded" && refundAmount
-                        ? ` (${toUSD(refundAmount)})`
-                        : null}
-                    </td>
-                    <td>
-                      {o.refund_eligible && o.status !== "refunded" ? (
-                        <button
-                          className="btn btn-sm"
-                          onClick={() => refund(o.order_id)}
-                        >
-                          Refund
-                        </button>
-                      ) : (
-                        <span style={{ opacity: 0.6 }}>—</span>
-                      )}
+                  const awaitingConfirm = confirmId === o.order_id;
+
+                  return (
+                    <tr key={o.order_id}>
+                      <td>#{o.order_id}</td>
+                      <td>{o.buyer_name}</td>
+                      <td>{o.buyer_email}</td>
+                      <td>
+                        {o.visit_date
+                          ? new Date(o.visit_date).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td>{o.items}</td>
+                      <td>{toUSD(o.total_cents)}</td>
+
+                      {/* STATUS */}
+                      <td>
+                        {o.status}
+                        {o.status === "refunded" && refundAmount
+                          ? ` (${toUSD(refundAmount)})`
+                          : ""}
+                      </td>
+
+                      {/* REFUND BUTTON OR CONFIRMATION */}
+                      <td>
+                        {o.status === "refunded" || !o.refund_eligible ? (
+                          <span style={{ opacity: 0.6 }}>—</span>
+                        ) : awaitingConfirm ? (
+                          // INLINE CONFIRM UI
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: "#d9534f", color: "white" }}
+                              onClick={() => doRefund(o.order_id)}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              className="btn btn-sm"
+                              onClick={() => setConfirmId(null)}
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          // NORMAL REFUND BUTTON
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => setConfirmId(o.order_id)}
+                          >
+                            Refund
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {rows.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: "center", padding: 16 }}>
+                      No orders.
                     </td>
                   </tr>
-                );
-              })}
-                {rows.length === 0 && !loading && (
-                  <tr><td colSpan="8" style={{ textAlign: "center", padding: 16 }}>No orders.</td></tr>
                 )}
               </tbody>
             </table>

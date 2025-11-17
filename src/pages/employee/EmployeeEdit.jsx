@@ -223,12 +223,12 @@ export default function EmployeeEdit() {
 
       <form onSubmit={save} className="card card--wide">
         <div className="two-col">
-          <div>
+          {/* <div>
             <label>Department ID</label>
             <input type="number" min="1" {...bind("department_id")} />
             <Help>Must be an existing department (integer ≥ 1).</Help>
             <FieldError msg={fe.department_id} />
-          </div>
+          </div> */}
 
           <div>
             <label>Role</label>
