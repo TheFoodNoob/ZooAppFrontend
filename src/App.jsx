@@ -1126,7 +1126,7 @@ export default function App() {
         <Route
           path="/feedings/:id"
           element={
-            <ProtectedRoute roles={["keeper", "admin", "ops_manager"]}>
+            <ProtectedRoute roles={["keeper", "admin", "ops_manager", "vet"]}>
               <FeedingsView />
             </ProtectedRoute>
           }

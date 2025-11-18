@@ -102,7 +102,7 @@ export default function AnimalEdit() {
 
   const checks = useMemo(
     () => ({
-      species_id: (v) => (!v ? "Species ID required" : ""),
+      // species_id: (v) => (!v ? "Species ID required" : ""),
       exhibit_id: (v) => (!v ? "Exhibit ID required" : ""),
       animal_name: (v) =>
         !v ? "Animal name required" : v.trim().length < 2 ? "Too short" : "",

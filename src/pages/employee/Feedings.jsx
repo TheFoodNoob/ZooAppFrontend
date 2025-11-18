@@ -265,7 +265,7 @@ export default function Feedings() {
                     </button>
                     <button
                       className="btn btn-sm"
-                      onClick={() => nav(`/feedings/edit/${f.feeding_id}`)}
+                      onClick={() => nav(`/feedings/${f.feeding_id}/edit`)}
                       style={{ margin: "0 5px" }}
                     >
                       Edit
